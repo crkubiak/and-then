@@ -25,7 +25,7 @@ Ordered so each phase can be run and checked before the next one starts. Section
 - [x] 3.2 `TaskParser`: priority, dates, completion, `+project`, `@context`, `key:value` tokens (§2.3)
 - [x] 3.3 `TaskSerializer`: rewrites only the lines that changed. Handles complete and reopen, including moving `(A)` (§2.2).
 - [x] 3.4 `TaskList`: ID index across both files, tree built from `parent:`, root-project inheritance (§3.2), reference resolution (§3.4)
-- [ ] 3.5 `IdAllocator`: the highest numeric ID across both files plus one (§3.3)
+- [x] 3.5 `IdAllocator`: the highest numeric ID across both files plus one (§3.3)
 
 **Check:** the §9 acceptance examples parse as expected (a scratch script run with Node).
 
