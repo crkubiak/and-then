@@ -6,7 +6,7 @@ Ordered so each phase can be run and checked before the next one starts. Section
 
 - [x] 1.1 Create the folder layout from the file tree at the end of this document, plus a `.gitignore` covering `data/`
 - [x] 1.2 `server.js`: serve `public/` as static files on `127.0.0.1`, with correct MIME types for `.js` modules
-- [ ] 1.3 `public/index.html` and an empty `styles.css`. `main.js` logs that it loaded.
+- [x] 1.3 `public/index.html` and an empty `styles.css`. `main.js` logs that it loaded.
 
 **Check:** `node server.js` serves a blank page with no console errors.
 
