@@ -1,6 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const ROOT = import.meta.dirname;
 
@@ -14,28 +15,152 @@ const MIME = {
   '.ico': 'image/x-icon',
 };
 
+const MAX_BODY = 5 * 1024 * 1024; // 5 MB cap on PUT bodies
+const FILES = ['todo.txt', 'done.txt']; // the only files the API ever touches
+
+// An error that maps straight to an HTTP status.
+class HttpError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
 class Server {
   constructor({ port = 3000, dataDir = path.join(ROOT, 'data') } = {}) {
     this.port = port;
-    this.dataDir = dataDir; // used by the /api routes in Phase 2
+    this.dataDir = dataDir;
+    this.putQueue = Promise.resolve(); // serializes PUTs so the version check and write are atomic
     this.publicDir = path.join(ROOT, 'public');
     this.http = http.createServer((req, res) => this.handle(req, res));
   }
 
-  start() {
+  async start() {
+    await this.ensureFiles();
     this.http.listen(this.port, '127.0.0.1', () => {
       console.log(`Listening on http://127.0.0.1:${this.port}`);
     });
   }
 
-  // Phase 2: dispatch /api/... here before falling through to static files.
+  // Create the data dir and empty files if missing. Never truncates: 'a' only creates.
+  async ensureFiles() {
+    await fs.mkdir(this.dataDir, { recursive: true });
+    for (const name of FILES) {
+      await (await fs.open(path.join(this.dataDir, name), 'a')).close();
+    }
+  }
+
   async handle(req, res) {
     try {
-      await this.serveStatic(req, res);
+      const pathname = req.url.split(/[?#]/)[0];
+      if (pathname === '/api' || pathname.startsWith('/api/')) {
+        await this.handleApi(req, res, pathname);
+      } else {
+        await this.serveStatic(req, res);
+      }
     } catch (err) {
+      if (res.headersSent) return res.destroy();
+      if (pathnameIsApi(req.url) && err instanceof HttpError) {
+        return this.sendJson(res, err.status, { error: err.message });
+      }
       console.error(err);
+      if (pathnameIsApi(req.url)) return this.sendJson(res, 500, { error: 'Internal Server Error' });
       this.send(res, 500, 'Internal Server Error');
     }
+  }
+
+  async handleApi(req, res, pathname) {
+    // Reject foreign Host headers to block DNS rebinding from other sites.
+    const allowedHosts = [`127.0.0.1:${this.port}`, `localhost:${this.port}`];
+    if (!allowedHosts.includes(req.headers.host)) throw new HttpError(403, 'Forbidden host');
+    if (pathname !== '/api/files') throw new HttpError(404, 'Not Found');
+    if (req.method === 'GET') return this.sendJson(res, 200, await this.readFiles());
+    if (req.method === 'PUT') return this.putFiles(req, res);
+    res.setHeader('Allow', 'GET, PUT');
+    throw new HttpError(405, 'Method Not Allowed');
+  }
+
+  // Paths are built only from the fixed FILES names, never from the request.
+  async readFiles() {
+    const [todo, done] = await Promise.all(
+      FILES.map((name) => fs.readFile(path.join(this.dataDir, name), 'utf8')),
+    );
+    return { todo, done, version: this.hash(todo, done) };
+  }
+
+  // Hash with a \0 separator so (a, bc) and (ab, c) differ.
+  hash(todo, done) {
+    return crypto.createHash('sha256').update(todo).update('\0').update(done).digest('hex');
+  }
+
+  async putFiles(req, res) {
+    const type = (req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
+    if (type !== 'application/json') throw new HttpError(415, 'Content-Type must be application/json');
+    const body = this.parseBody(await this.readBody(req, res));
+
+    // Chain onto the queue so concurrent PUTs run one at a time.
+    const run = this.putQueue.then(() => this.applyPut(body));
+    this.putQueue = run.catch(() => {});
+    const { status, payload } = await run;
+    this.sendJson(res, status, payload);
+  }
+
+  async applyPut({ todo, done, version }) {
+    const current = await this.readFiles();
+    if (version !== current.version) return { status: 409, payload: current };
+    // done.txt first: a failure in between duplicates lines rather than losing them.
+    await this.writeAtomic('done.txt', done);
+    await this.writeAtomic('todo.txt', todo);
+    return { status: 200, payload: { version: this.hash(todo, done) } };
+  }
+
+  async writeAtomic(name, content) {
+    const target = path.join(this.dataDir, name);
+    const tmp = path.join(this.dataDir, `.${name}.${process.pid}.tmp`);
+    try {
+      await fs.writeFile(tmp, content, 'utf8');
+      await fs.rename(tmp, target);
+    } catch (err) {
+      await fs.rm(tmp, { force: true });
+      throw err;
+    }
+  }
+
+  async readBody(req, res) {
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > MAX_BODY) {
+        res.setHeader('Connection', 'close'); // the rest of the body is never read
+        throw new HttpError(413, 'Payload Too Large');
+      }
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks).toString('utf8');
+  }
+
+  parseBody(text) {
+    let body;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new HttpError(400, 'Body must be valid JSON');
+    }
+    for (const key of ['todo', 'done', 'version']) {
+      if (typeof body?.[key] !== 'string') throw new HttpError(400, `"${key}" must be a string`);
+    }
+    return body;
+  }
+
+  sendJson(res, status, payload) {
+    const text = JSON.stringify(payload);
+    res.writeHead(status, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Length': Buffer.byteLength(text),
+      'Cache-Control': 'no-store',
+    });
+    res.end(text);
   }
 
   async serveStatic(req, res) {
@@ -74,6 +199,11 @@ class Server {
     res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end(text);
   }
+}
+
+function pathnameIsApi(url) {
+  const p = url.split(/[?#]/)[0];
+  return p === '/api' || p.startsWith('/api/');
 }
 
 const [, , dataDirArg] = process.argv;

@@ -12,10 +12,10 @@ Ordered so each phase can be run and checked before the next one starts. Section
 
 ## Phase 2: File API (§7.1)
 
-- [ ] 2.1 Create `data/todo.txt` and `data/done.txt` on startup if missing
-- [ ] 2.2 `GET /api/files` returning `{ todo, done, version }`, with `version` as a content hash
-- [ ] 2.3 `PUT /api/files` with an atomic temp-file-and-rename write, returning `409` on a stale version
-- [ ] 2.4 Restrict reads and writes to the two fixed paths
+- [x] 2.1 Create `data/todo.txt` and `data/done.txt` on startup if missing
+- [x] 2.2 `GET /api/files` returning `{ todo, done, version }`, with `version` as a content hash
+- [x] 2.3 `PUT /api/files` with an atomic temp-file-and-rename write, returning `409` on a stale version
+- [x] 2.4 Restrict reads and writes to the two fixed paths
 
 **Check:** `curl` can read and write the files, and a stale `PUT` gets `409`.
 
