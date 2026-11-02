@@ -748,15 +748,22 @@ button.task-check:hover {
   cursor: pointer;
 }
 
-/* New-task marker: a yellow fill dot (never text) and bold description. Cleared in place when seen. */
-.new-dot {
+/* Unseen markers, cleared in place when seen. New: filled yellow dot and bold text. Edited: hollow teal ring, normal weight. */
+.seen-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
   margin-right: var(--space-2);
   border-radius: 50%;
-  background: var(--yellow);
   vertical-align: middle;
+}
+
+.seen-dot-new {
+  background: var(--yellow);
+}
+
+.seen-dot-edited {
+  border: 2px solid var(--teal);
 }
 
 .sr-only {

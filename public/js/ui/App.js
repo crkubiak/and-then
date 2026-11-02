@@ -11,6 +11,7 @@ import { ProjectSection } from './ProjectSection.js';
 import { EditRules } from '../rules/EditRules.js';
 import { NewTaskRules } from '../rules/NewTaskRules.js';
 import { SweepRules } from '../rules/SweepRules.js';
+import { LineDiff } from '../rules/LineDiff.js';
 import { Validator } from '../rules/Validator.js';
 import { VisibilityRules } from '../rules/VisibilityRules.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -64,6 +65,7 @@ export class App {
   #seen = new SeenStore();
   #entries = new Map(); // todo.txt task key to raw line, rebuilt each render
   #newKeys = new Set(); // keys of tasks not yet seen, rebuilt each render and shrunk by #markSeen
+  #editedKeys = new Map(); // keys of seen tasks whose line changed since, to a tooltip summary; same lifecycle as #newKeys
   #sections = new Map(); // project (null = Inbox) to its ProjectSection, rebuilt each render
 
   constructor(root, { store = new FileStore() } = {}) {
@@ -190,18 +192,21 @@ export class App {
     return new Map(list.todoTasks.map((task) => [TaskRow.keyOf(task), task.raw]));
   }
 
-  // The one place a marker clears (click and focus now; the on-screen timer joins it in 11.4).
-  // Updates the rows in place, with no re-render.
+  // The one place a marker (new or edited) clears (click and focus now; the on-screen timer joins it
+  // in 11.4). Records the current line and updates the rows in place, with no re-render.
   #markSeen(keys) {
-    const fresh = [...keys].filter((key) => this.#newKeys.has(key));
+    const fresh = [...keys].filter((key) => this.#newKeys.has(key) || this.#editedKeys.has(key));
     if (fresh.length === 0) return;
     this.#seen.mark(new Map(fresh.map((key) => [key, this.#entries.get(key)])));
     const gone = new Set(fresh);
-    for (const key of fresh) this.#newKeys.delete(key);
+    for (const key of fresh) {
+      this.#newKeys.delete(key);
+      this.#editedKeys.delete(key);
+    }
     for (const row of this.#root.querySelectorAll('.task-row')) {
       if (!gone.has(row.dataset.taskKey)) continue;
-      row.classList.remove('is-new');
-      for (const mark of row.querySelectorAll('.new-mark')) mark.remove();
+      row.classList.remove('is-new', 'is-edited');
+      for (const mark of row.querySelectorAll('.seen-mark')) mark.remove();
     }
   }
 
@@ -610,6 +615,11 @@ export class App {
     this.#entries = App.#entriesOf(this.#taskList);
     this.#seen.sync(this.#entries);
     this.#newKeys = new Set([...this.#entries.keys()].filter((key) => this.#seen.isNew(key)));
+    // Seen before but the line differs now. Only id'd tasks can get here: an id-less key is its line.
+    this.#editedKeys = new Map(
+      [...this.#entries].filter(([key, raw]) => !this.#newKeys.has(key) && this.#seen.raw(key) !== raw)
+        .map(([key, raw]) => [key, LineDiff.summary(this.#seen.raw(key), raw)]),
+    );
     this.#validate();
     this.#toolbar.setSweep(SweepRules.eligible(this.#taskList, App.today()).length);
     const empty = this.#taskList.todoTasks.length === 0;
@@ -705,6 +715,7 @@ export class App {
         isVisible: (task) => this.#isVisible(task),
         problems: this.#problemsByTask,
         newKeys: this.#newKeys,
+        editedKeys: this.#editedKeys,
         actions: {
           complete: (task) => this.#complete(task),
           reopen: (task) => this.#reopen(task),

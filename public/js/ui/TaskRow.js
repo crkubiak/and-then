@@ -23,6 +23,7 @@ export class TaskRow {
   #isVisible;
   #problems;
   #newKeys;
+  #editedKeys;
   #node;
   #children = null;
   #toggle = null;
@@ -31,12 +32,14 @@ export class TaskRow {
   // `collapsedKeys` is the App-owned Set of collapsed task keys (see TaskRow.keyOf).
   // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task), showTask(id), addSubtask(task), edit(task).
   // `hideCompleted` only drives the anchor badge (§4.3); `isVisible(task)` decides which children render.
-  // `newKeys` holds the keys of unseen tasks; those rows get a dot and bold text until actions.seen(task) fires on click or focus.
+  // `newKeys` holds the keys of unseen tasks (filled yellow dot, bold text); `editedKeys` maps the keys of tasks changed
+  // since they were seen to a tooltip summary (hollow teal ring). Both clear when actions.seen(task) fires on click or focus.
   // `problems` maps a task to its validator problems, shown as a badge in the tail.
   // `editor` is { key, element, create }: the open inline editor. Shown in place of the description on the
   // row with that key, or, when `create`, as a new-subtask input at the top of that row's children.
-  constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {}, editor = null, hideCompleted = false, isVisible = () => true, problems = new Map(), newKeys = new Set() }) {
+  constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {}, editor = null, hideCompleted = false, isVisible = () => true, problems = new Map(), newKeys = new Set(), editedKeys = new Map() }) {
     this.#newKeys = newKeys;
+    this.#editedKeys = editedKeys;
     this.#hideCompleted = hideCompleted;
     this.#isVisible = isVisible;
     this.#problems = problems;
@@ -64,7 +67,9 @@ export class TaskRow {
     if (task.priority) row.append(TaskRow.priorityBadge(task.priority));
 
     const main = TaskRow.#el('span', 'task-main');
-    if (this.#newKeys.has(TaskRow.keyOf(task))) this.#markNew(row, main);
+    const key = TaskRow.keyOf(task);
+    if (this.#newKeys.has(key)) this.#markUnseen(row, main, 'new', 'New');
+    else if (this.#editedKeys.has(key)) this.#markUnseen(row, main, 'edited', 'Edited', this.#editedKeys.get(key));
     main.append(this.#description());
     for (const badge of this.#badges()) main.append(' ', badge);
     if (this.#editsThis() && !this.#editor.create) {
@@ -79,12 +84,13 @@ export class TaskRow {
     return row;
   }
 
-  // A yellow dot for sighted users and a hidden "New" for screen readers.
-  #markNew(row, main) {
-    row.classList.add('is-new');
-    const dot = TaskRow.#el('span', 'new-mark new-dot');
+  // A dot for sighted users and a hidden label for screen readers. `kind` is 'new' or 'edited'.
+  #markUnseen(row, main, kind, label, title = null) {
+    row.classList.add(`is-${kind}`);
+    const dot = TaskRow.#el('span', `seen-mark seen-dot seen-dot-${kind}`);
     dot.setAttribute('aria-hidden', 'true');
-    main.append(dot, TaskRow.#el('span', 'new-mark sr-only', 'New'), ' ');
+    if (title) dot.title = title;
+    main.append(dot, TaskRow.#el('span', 'seen-mark sr-only', label), ' ');
     const seen = () => this.#actions.seen?.(this.#task);
     row.addEventListener('click', seen);
     row.addEventListener('focusin', seen);
@@ -159,7 +165,7 @@ export class TaskRow {
       this.#children.append(box);
     }
     for (const kid of SortOrder.sort(kids)) {
-      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions, editor: this.#editor, hideCompleted: this.#hideCompleted, isVisible: this.#isVisible, problems: this.#problems, newKeys: this.#newKeys });
+      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions, editor: this.#editor, hideCompleted: this.#hideCompleted, isVisible: this.#isVisible, problems: this.#problems, newKeys: this.#newKeys, editedKeys: this.#editedKeys });
       this.#children.append(row.element);
     }
     this.#node.append(this.#children);
