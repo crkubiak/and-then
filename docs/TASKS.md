@@ -32,7 +32,7 @@ Ordered so each phase can be run and checked before the next one starts. Section
 ## Phase 4: Validator and agent docs (§8)
 
 - [x] 4.1 `Validator`: every check listed in §8, returning `{ file, line, severity, message }`
-- [ ] 4.2 `validate.js` CLI with output format and exit codes as specified in §8
+- [x] 4.2 `validate.js` CLI with output format and exit codes as specified in §8
 - [ ] 4.3 `docs/FORMAT.md`: syntax, ID rule, subtask/project rule, sweep rule, and "run `node validate.js` after every edit"
 - [ ] 4.4 A sample `data/todo.txt` with valid tasks and one of each problem type
 
