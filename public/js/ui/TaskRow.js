@@ -1,4 +1,5 @@
 import { ProjectPalette } from './ProjectPalette.js';
+import { Age } from '../rules/Age.js';
 import { CompletionRules } from '../rules/CompletionRules.js';
 import { SortOrder } from '../rules/SortOrder.js';
 import { VisibilityRules } from '../rules/VisibilityRules.js';
@@ -259,6 +260,12 @@ export class TaskRow {
       pill.setAttribute('aria-label', `Show blocking task #${task.depId}`);
       pill.addEventListener('click', () => this.#actions.showTask?.(task.depId));
       tail.append(pill);
+    }
+    const age = task.file === 'todo' && !task.complete && task.creationDate ? Age.label(task.creationDate, this.#today) : null;
+    if (age !== null) {
+      const badge = TaskRow.#el('span', 'task-age', age);
+      badge.title = `Created ${task.creationDate}`;
+      tail.append(badge);
     }
     if (task.by !== null) tail.append(TaskRow.#authorBadge(task.by));
     if (task.id !== null) tail.append(TaskRow.#el('span', 'task-id', `#${task.id}`));

@@ -785,6 +785,7 @@ button.task-check:hover {
 }
 
 .task-progress,
+.task-age,
 .task-id {
   color: var(--fg-muted);
 }

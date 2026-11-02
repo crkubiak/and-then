@@ -48,7 +48,7 @@ See §10. Automated tests are deferred. The parsing and rules classes don't touc
 ```
 
 1. **Priority (optional):** `(A)` to `(Z)` at the start of the line.
-2. **Creation date (optional):** `YYYY-MM-DD` after the priority. The app adds it automatically to tasks created in the UI.
+2. **Creation date (required):** `YYYY-MM-DD` after the priority. The app adds it automatically to tasks created in the UI. An open task in `todo.txt` without one is a validation error (§8), and inline edit won't remove it. Completed lines and `done.txt` are exempt.
 3. **Description:** Free text containing `+project`, `@context`, and `key:value` tokens in any order.
 
 ### 2.2 Completed task
@@ -170,10 +170,10 @@ Within each section, and within each sibling group, tasks sort by:
 
 ### 5.3 Task row
 
-- Checkbox (subject to §4), priority badge, description, and badges for context, secondary projects, due date or overdue status, Blocked-by, and validation problems.
+- Checkbox (subject to §4), priority badge, description, and badges for context, secondary projects, due date or overdue status, Blocked-by, and validation problems. Open tasks also show an **age** in the tail, computed from the creation date at render time and never stored: `0D` to `29D` under 30 days, then whole calendar months (`1M` to `11M`), then whole years (`1Y`). A month-end start counts its anniversary on the last day of a shorter month. A creation date after today shows no age. Muted text, title "Created YYYY-MM-DD".
 - Subtasks render indented under their parent with a tree guide line. The parent row has a collapse toggle.
 - **+ Subtask:** pre-fills the add input with `+RootProject parent:ID`. Nothing is written on click. If the parent lacks an `id:`, the prefill shows `parent:new`, and on submit the parent gets a fresh id in the same save as the new subtask.
-- **Inline edit:** clicking the description opens the full raw line for editing. Enter saves and Escape cancels. Rejected edits: the project-mismatch cases in §3.2, an empty line or one with no words (deletion is not in v1), adding or removing the `x ` prefix (use the checkbox), changing or removing an existing `id:` or duplicating another, and a `parent:` that is missing, in `done.txt`, or would form a cycle. The add input rejects the same `id:` and `parent:` cases and `x ` lines. The raw drawer (§5.5) rejects nothing.
+- **Inline edit:** clicking the description opens the full raw line for editing. Enter saves and Escape cancels. Rejected edits: the project-mismatch cases in §3.2, an empty line or one with no words (deletion is not in v1), adding or removing the `x ` prefix (use the checkbox), removing the creation date from an open task, changing or removing an existing `id:` or duplicating another, and a `parent:` that is missing, in `done.txt`, or would form a cycle. The add input rejects the same `id:` and `parent:` cases and `x ` lines. The raw drawer (§5.5) rejects nothing.
 
 ### 5.4 Add task input
 
@@ -293,7 +293,7 @@ todo.txt:31  warning  completed parent has 2 open subtasks
 - It uses the same validator class as the UI Problems panel.
 - `docs/FORMAT.md` instructs the agent to run it after every edit.
 
-**Checks:** duplicate keys, duplicate IDs, a second `parent:`, unresolved `parent:` / `dep:`, cycles, subtask project mismatch, completed parent with open descendants, malformed dates, a line with no description (any line in either file).
+**Checks:** duplicate keys, duplicate IDs, a second `parent:`, unresolved `parent:` / `dep:`, cycles, subtask project mismatch, completed parent with open descendants, malformed dates, an open task with no creation date, a line with no description (any line in either file).
 
 ---
 

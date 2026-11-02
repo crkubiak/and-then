@@ -6,7 +6,7 @@ TaskFlow keeps tasks in two plain text files, `data/todo.txt` (open and recently
 
 ## Line anatomy
 
-Active task: `[(P) ][CREATION ]description`
+Active task: `[(P) ]CREATION description`. Every open line must start with a creation date (after the priority, if any).
 
 ```
 (A) 2026-10-30 Call supplier +Infrastructure @phone id:10 parent:8 dep:5 due:2026-11-15
@@ -92,6 +92,7 @@ Order matters. First append the lines to `done.txt`, unchanged and in their orig
 | `bad-date` | error | Use a real `YYYY-MM-DD` date (also checks `due:`). |
 | `loose-date` | warning | A leading date like `2026-1-5` is not read as a date. Rewrite it as `YYYY-MM-DD`. |
 | `missing-completion-date` | warning | Add the completion date after `x`. |
+| `missing-creation-date` | error | Add a creation date after the priority (today's date if unknown). Open tasks in `todo.txt` only. Completed lines and `done.txt` are exempt. |
 | `no-description` | warning | The line is only tags, projects and contexts. Add the task text, or delete the line. Applies to open and completed lines in both files. |
 | `parent-missing` | error | Point at an existing ID or remove `parent:`. |
 | `parent-archived` | error | The parent is in `done.txt`. Remove `parent:` or reopen the parent. |

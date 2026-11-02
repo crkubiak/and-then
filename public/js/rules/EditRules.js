@@ -9,6 +9,7 @@ export class EditRules {
     const next = TaskParser.parse(line, { file: 'todo', lineNumber: task.lineNumber });
     if (next.description === '') return 'Enter a task description.';
     if (next.complete !== task.complete) return 'Use the checkbox to complete or reopen.';
+    if (!task.complete && task.creationDate !== null && next.creationDate === null) return 'Keep the creation date.';
     if (task.by !== null && next.by !== task.by) return "The author tag can't change."; // adding one is fine
     return (
       EditRules.#idError(taskList, task, next) ??

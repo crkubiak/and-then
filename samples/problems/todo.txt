@@ -1,21 +1,22 @@
 (A) 2026-10-30 Valid root +Alpha id:1
 2026-10-30 Valid child parent:1 id:2 dep:1
-Valid plain line @home due:2026-11-10
-Repeated tag owner:ann owner:bob
-Two parents +Alpha parent:1 parent:2 id:5
-Shared id first id:6
-Shared id second id:6
-Impossible due date due:2026-02-30
+2026-10-30 Valid plain line @home due:2026-11-10
+2026-10-30 Repeated tag owner:ann owner:bob
+2026-10-30 Two parents +Alpha parent:1 parent:2 id:5
+2026-10-30 Shared id first id:6
+2026-10-30 Shared id second id:6
+2026-10-30 Impossible due date due:2026-02-30
 2026-1-5 Loose leading date
 x Completed with no date
-Orphan parent:99
-Archived parent parent:50
-Loop one id:13 parent:14
-Loop two id:14 parent:13
-Self dependency id:15 dep:15
-Dangling dependency dep:98
-Beta root +Beta id:17
-Wrong project child +Alpha parent:17 id:18
+2026-10-30 Orphan parent:99
+2026-10-30 Archived parent parent:50
+2026-10-30 Loop one id:13 parent:14
+2026-10-30 Loop two id:14 parent:13
+2026-10-30 Self dependency id:15 dep:15
+2026-10-30 Dangling dependency dep:98
+2026-10-30 Beta root +Beta id:17
+2026-10-30 Wrong project child +Alpha parent:17 id:18
 x 2026-11-01 2026-10-30 Finished parent +Alpha id:19
-Still open child parent:19
-owner:ann +Alpha @home
+2026-10-30 Still open child parent:19
+2026-10-30 owner:ann +Alpha @home
+Open line without a creation date

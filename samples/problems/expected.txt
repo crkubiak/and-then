@@ -3,6 +3,7 @@ todo.txt:5   error    second parent: token (the first one wins)
 todo.txt:6   error    id:6 is used by 2 tasks
 todo.txt:7   error    id:6 is used by 2 tasks
 todo.txt:8   error    due:2026-02-30 is not a valid YYYY-MM-DD date
+todo.txt:9   error    open task has no creation date
 todo.txt:9   warning  "2026-1-5" looks like a date but is not YYYY-MM-DD
 todo.txt:10  warning  completed task has no completion date
 todo.txt:11  error    parent:99 does not match any task
@@ -14,4 +15,5 @@ todo.txt:16  error    dep:98 does not match any task
 todo.txt:18  error    subtask project +Alpha differs from root project +Beta
 todo.txt:19  warning  completed parent has 1 open subtask
 todo.txt:21  warning  line has no description
-12 errors, 4 warnings
+todo.txt:22  error    open task has no creation date
+14 errors, 4 warnings

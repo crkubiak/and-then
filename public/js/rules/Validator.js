@@ -26,6 +26,9 @@ export class Validator {
       if (key === 'parent') add(task, 'error', 'second-parent', 'second parent: token (the first one wins)');
       else add(task, 'error', 'duplicate-key', `${key}: appears more than once`);
     }
+    if (task.file === 'todo' && !task.complete && task.creationDate === null) {
+      add(task, 'error', 'missing-creation-date', 'open task has no creation date');
+    }
     if (task.complete && !task.completionDate) {
       add(task, 'warning', 'missing-completion-date', 'completed task has no completion date');
     }

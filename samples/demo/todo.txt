@@ -21,7 +21,7 @@ x 2026-10-29 2026-10-16 Review analytics requirements parent:15 id:18
 2026-10-30 Audit page load speed +Website @laptop due:2026-12-01
 (B) 2026-11-01 Call dentist @phone due:2026-11-03
 2026-11-01 Buy birthday gift @errands
-Read the migration guide
+2026-10-29 Read the migration guide
 2026-10-29 Reply to conference invite @laptop due:2026-10-30
 x 2026-09-20 2026-09-05 Migrate wiki +Infra id:25
 x 2026-09-18 2026-09-05 Export old wiki pages parent:25 id:26
