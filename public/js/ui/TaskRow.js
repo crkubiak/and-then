@@ -31,7 +31,8 @@ export class TaskRow {
   // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task), showTask(id), addSubtask(task), edit(task).
   // `hideCompleted` only drives the anchor badge (§4.3); `isVisible(task)` decides which children render.
   // `problems` maps a task to its validator problems, shown as a badge in the tail.
-  // `editor` is { key, element }: the open inline editor, shown in place of the description on the row with that key.
+  // `editor` is { key, element, create }: the open inline editor. Shown in place of the description on the
+  // row with that key, or, when `create`, as a new-subtask input at the top of that row's children.
   constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {}, editor = null, hideCompleted = false, isVisible = () => true, problems = new Map() }) {
     this.#hideCompleted = hideCompleted;
     this.#isVisible = isVisible;
@@ -62,7 +63,7 @@ export class TaskRow {
     const main = TaskRow.#el('span', 'task-main');
     main.append(this.#description());
     for (const badge of this.#badges()) main.append(' ', badge);
-    if (this.#editor?.key === TaskRow.keyOf(task)) {
+    if (this.#editsThis() && !this.#editor.create) {
       row.classList.add('is-editing'); // CSS hides the text and badges behind the editor
       main.append(this.#editor.element);
     }
@@ -72,6 +73,10 @@ export class TaskRow {
     this.#appendTail(tail);
     row.append(tail);
     return row;
+  }
+
+  #editsThis() {
+    return this.#editor?.key === TaskRow.keyOf(this.#task);
   }
 
   // A todo.txt description is a button that opens the inline editor.
@@ -124,20 +129,26 @@ export class TaskRow {
   // Collapse state is session-only and lives in the App's Set, so it survives re-renders.
   #buildChildren() {
     const kids = this.#visibleChildren();
-    if (kids.length === 0) return;
+    const adding = this.#editsThis() && this.#editor.create;
+    if (kids.length === 0 && !adding) return;
     this.#children = TaskRow.#el('div', 'task-children');
     this.#children.id = `task-children-${TaskRow.#nextId++}`;
     // First nest level takes the project accent; each deeper level steps through the rotation.
     const accent = this.#palette.accent(this.#taskList.effectiveProject(this.#task));
     const rail = ProjectPalette.rotate(accent, this.#taskList.ancestors(this.#task).length);
     this.#children.style.setProperty('--rail', `var(--${rail})`);
-    this.#toggle.setAttribute('aria-controls', this.#children.id);
+    this.#toggle?.setAttribute('aria-controls', this.#children.id);
+    if (adding) {
+      const box = TaskRow.#el('div', 'task-new');
+      box.append(this.#editor.element);
+      this.#children.append(box);
+    }
     for (const kid of SortOrder.sort(kids)) {
       const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions, editor: this.#editor, hideCompleted: this.#hideCompleted, isVisible: this.#isVisible, problems: this.#problems });
       this.#children.append(row.element);
     }
     this.#node.append(this.#children);
-    if (this.#collapsedKeys.has(TaskRow.keyOf(this.#task))) this.#setExpanded(false);
+    if (this.#toggle && this.#collapsedKeys.has(TaskRow.keyOf(this.#task))) this.#setExpanded(false);
   }
 
   // todo.txt tasks get a real checkbox button; done.txt tasks stay a static mark.

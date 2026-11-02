@@ -44,7 +44,7 @@ Method: scripts against the real code. Rules classes directly, `App` with a fake
 | §3.2 Subtask inherits root project, may omit `+project` | Pass | `effectiveProject`, nested depth 3 |
 | §3.2 Naming a different project is a validation error, subtask still renders under parent with error badge | Pass | `samples/problems` line 18 in UI |
 | §3.2 Subtask under a no-project root may not name a project | Pass | Validator `project-mismatch` |
-| §3.2 + Subtask writes root project (also on a nested subtask) | Pass | Prefill ` +Infra parent:3` |
+| §3.2 + Subtask writes root project (also on a nested subtask) | Pass | Inline input appends ` +Infra parent:3` |
 | §3.2 Inline edit changing a subtask's project is rejected with a message | Pass | UI edit, file unchanged, editor stays open |
 | §3.2 Adding `parent:` to a task in another project is rejected | Pass | UI edit and add input |
 | §3.2 Root project change blocked while subtasks name the old project | Pass | EditRules (extra, sensible) |
@@ -113,7 +113,7 @@ Method: scripts against the real code. Rules classes directly, `App` with a fake
 | §5.1 Accordions, Inbox first, header counts, top priority, progress, collapse saved | Pass | Demo UI |
 | §5.1 Expand All / Collapse All | Pass | Fake DOM |
 | §5.2 Sort order (open, priority, due, created, file order) | Pass | SortOrder unit |
-| §5.3 + Subtask: nothing written on click; `parent:new` gets id in same save | Pass | One PUT with both lines |
+| §5.3 + Subtask: nothing written on click; parent with no id gets one in the same save | Pass | One PUT with both lines |
 | §5.3 "The only edits rejected are the project-mismatch cases" | **Fail** | Code rejects more. See F1 |
 | §5.4 Add input stamps today's date; keeps existing date; priority first | Pass | Server round trip |
 | §5.5 Raw drawer edits and saves both files, re-renders | Pass | Fake DOM |
@@ -171,7 +171,7 @@ Setup: `cp -R samples/demo /tmp/demo-ui && PORT=3300 node server.js /tmp/demo-ui
 8. **Toasts.** Click Sweep. Toast "Swept 4 tasks to done.txt." appears bottom-left, disappears after about 4 s, and the x dismisses it. Trigger several errors (see step 10) and confirm at most 5 stack.
 9. **Live reload.** With the page open, append a line to `/tmp/demo-ui/todo.txt` in an editor. It appears within about a second. Scroll down, collapse a section, open an inline edit, then change the file again: scroll, collapse state and the open edit survive. Kill the server and watch the dot turn "Reconnecting", then restart and watch it return to "Live".
 10. **Inline edit.** Click "Fix cable management". Caret lands at the end, Enter saves, Escape cancels. Add `+Website` to a subtask of an Infra task: error toast, editor stays open.
-11. **Add input and + Subtask.** Click + Subtask on "Replace desk lamp" (no id). Input is focused with caret at the start, text ` +Home_Office parent:new`, and the page scrolls to the input. Type a description at the start, press Enter. The parent gets `id:52`.
+11. **Add input and + Subtask.** Click + Subtask on "Replace desk lamp" (no id). A one-line input opens under the row, indented, and is focused. Type only a description, press Enter. The parent gets `id:52` and the new line has `+Home_Office parent:52`, the date and `by:me`, in one save. The input stays open and empty; Escape closes it.
 12. **Problems panel.** Run the server on a copy of `samples/problems`. Badge reads 15 problems, red. Open it, click "owner:" item: the page scrolls to that row and flashes it. Confirm the wrong-project child renders under "Beta root" with an Error badge.
 13. **Hide Completed and collapse persistence.** Tick Hide Completed, collapse a section, reload the page: both persist. Open a private window: neither is set.
 14. **Colors.** Priority (A) red, (B) yellow, (C) green, others teal. Due: overdue red, within 3 days yellow, later green text. Project accents rotate green, yellow, teal, red in order of appearance. Inbox muted. Completed rows muted with strikethrough and green check. Tree guide lines step through the rotation per depth. Red and teal are only used as fills.

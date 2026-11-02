@@ -4,10 +4,9 @@ export class TaskInput {
   #onSubmit;
   #form;
   #input;
-  #pending = null; // 8.4: a step to run with the next submit, set via prefill()
   #busy = false;
 
-  // `onSubmit(text, pending)` resolves true when the task was saved.
+  // `onSubmit(text)` resolves true when the task was saved.
   constructor({ onSubmit }) {
     this.#onSubmit = onSubmit;
     this.#form = document.createElement('form');
@@ -24,9 +23,6 @@ export class TaskInput {
     add.className = 'task-input-add';
     add.textContent = 'Add';
     this.#form.append(this.#input, add);
-    this.#input.addEventListener('input', () => {
-      if (this.#input.value === '') this.#pending = null; // emptied by hand: drop the pending step
-    });
     this.#form.addEventListener('submit', (event) => {
       event.preventDefault();
       this.#submit();
@@ -35,17 +31,6 @@ export class TaskInput {
 
   get element() {
     return this.#form;
-  }
-
-  // Fills the input, focuses it, and places the caret ('start' or 'end').
-  prefill(text, { caretAt = 'end', pending = null } = {}) {
-    this.#input.value = text;
-    this.#pending = pending;
-    this.#input.focus({ preventScroll: true });
-    const at = caretAt === 'start' ? 0 : text.length;
-    this.#input.setSelectionRange(at, at);
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    this.#form.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
   }
 
   snapshot() {
@@ -64,9 +49,8 @@ export class TaskInput {
     if (text.trim() === '' || this.#busy) return;
     this.#busy = true;
     try {
-      const saved = await this.#onSubmit(text, this.#pending);
+      const saved = await this.#onSubmit(text);
       if (!saved) return; // keep the text so it can be fixed
-      this.#pending = null;
       if (this.#input.value === text) this.#input.value = ''; // not if typing continued meanwhile
       this.#input.focus({ preventScroll: true });
     } finally {

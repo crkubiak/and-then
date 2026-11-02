@@ -2,6 +2,7 @@ import { FileStore } from '../io/FileStore.js';
 import { LiveSync } from '../io/LiveSync.js';
 import { TaskList } from '../model/TaskList.js';
 import { IdAllocator } from '../model/IdAllocator.js';
+import { TaskParser } from '../model/TaskParser.js';
 import { TaskSerializer } from '../model/TaskSerializer.js';
 import { CompletionRules } from '../rules/CompletionRules.js';
 import { ProjectPalette } from './ProjectPalette.js';
@@ -23,8 +24,6 @@ const FLASH_MS = 1500;
 const MAX_SAVE_ATTEMPTS = 3; // first try plus two re-applications after a 409
 const CHANGED_ON_DISK = 'That task changed on disk. Your edit was not saved.';
 const RAW_CHANGED = 'The files changed on disk while you were editing. Load latest, then re-apply your edit.';
-const NEW_ID = 'new'; // placeholder in a + Subtask prefill until the parent's id is allocated
-const NEW_ID_TOKEN = new RegExp(`(^|\\s)parent:${NEW_ID}(?=\\s|$)`);
 
 export class App {
   #root;
@@ -36,7 +35,7 @@ export class App {
   #status = 'reconnecting';
   #dot = null;
   #toast = null;
-  #taskInput = new TaskInput({ onSubmit: (text, pending) => this.#addTask(text, pending) });
+  #taskInput = new TaskInput({ onSubmit: (text) => this.#addTask(text) });
   #toolbar = new Toolbar({
     onHideChange: () => this.setTaskList(this.#taskList),
     onExpandAll: () => this.#setAllExpanded(true),
@@ -54,10 +53,12 @@ export class App {
   #reloadQueued = false;
   #latestVersion = null;
   #absorbed = new Set(); // versions already loaded from a 409; their live events need no reload
-  // Open inline editor: { task, draft, start, end, focused }. `draft` and the selection are
-  // synced from the live TaskEditor (#editorView) just before each re-render.
+  // Open inline editor: { task, create, draft, start, end, focused }. `draft` and the selection are
+  // synced from the live TaskEditor (#editorView) just before each re-render. With `create`, it is the
+  // new-subtask input and `task` is the parent. There is only ever one.
   #editor = null;
   #editorView = null;
+  #subtaskBusy = false; // an Enter in the new-subtask input is still saving
   #deferred = false; // a newer list was loaded while editing; the page shows an older one
   #sections = new Map(); // project (null = Inbox) to its ProjectSection, rebuilt each render
 
@@ -185,47 +186,69 @@ export class App {
     });
   }
 
-  // `pending` ({ parent }) is set by + Subtask when the parent had no id. If the typed text still
-  // has the placeholder, the id is allocated and written to the parent in this same commit.
-  #addTask(text, pending = null) {
+  #addTask(text) {
     return this.#commit((list) => {
-      let base = list;
-      let typed = text;
-      if (pending && NEW_ID_TOKEN.test(text)) {
-        const parent = list.locate(pending.parent);
-        if (!parent) return 'The parent task no longer exists.';
-        const id = parent.id ?? IdAllocator.next(list);
-        typed = text.replace(NEW_ID_TOKEN, `$1parent:${id}`);
-        if (parent.id === null) base = list.replaceLine(parent, TaskSerializer.setTag(parent, 'id', id));
-      }
-      const { line, error } = NewTaskRules.prepare(base, typed, App.today());
-      return error ?? base.appendLine('todo', line); // on error nothing is returned, so no id is written
+      const { line, error } = NewTaskRules.prepare(list, text, App.today());
+      return error ?? list.appendLine('todo', line);
     });
   }
 
-  // + Subtask: pre-fill the input. Nothing is written until the subtask is submitted.
-  #addSubtask(task) {
+  // Saves a subtask typed into the inline input. The parent gets a fresh id in the same commit
+  // when it has none; the root project and `parent:` are added here, never typed. On an error
+  // nothing is returned, so no id is written.
+  #addSubtask(parentRef, text, onSaved) {
+    let allocated = null;
+    return this.#commit((list) => {
+      const parent = list.locate(parentRef);
+      if (!parent) return 'The parent task no longer exists.';
+      if (parent.complete) return 'That task is already complete.';
+      const typed = TaskParser.parse(text.trim(), { file: 'todo', lineNumber: 0 });
+      if (typed?.parentId != null) return 'The parent is set for you. Remove parent: from the text.';
+      const id = parent.id ?? IdAllocator.next(list);
+      const base = parent.id === null ? list.replaceLine(parent, TaskSerializer.setTag(parent, 'id', id)) : list;
+      const project = list.effectiveProject(parent);
+      const addProject = project !== null && !typed?.projects.includes(project);
+      const full = `${text.trim()}${addProject ? ` +${project}` : ''} parent:${id}`;
+      const { line, error } = NewTaskRules.prepare(base, full, App.today());
+      if (error) return error;
+      allocated = parent.id === null ? id : null;
+      return base.appendLine('todo', line);
+    }, { onSaved: () => onSaved(allocated) });
+  }
+
+  // + Subtask: opens the inline input under the parent. Nothing is written until Enter.
+  #openSubtask(task) {
     const parent = this.#taskList.locate(task);
-    if (!parent) return;
-    const project = this.#taskList.effectiveProject(parent);
-    const text = ` ${project ? `+${project} ` : ''}parent:${parent.id ?? NEW_ID}`;
-    this.#taskInput.prefill(text, { caretAt: 'start', pending: parent.id === null ? { parent } : null });
+    if (!parent || parent.file !== 'todo' || parent.complete) return;
+    if (!this.#claimEditor()) return;
+    this.#collapsedKeys.delete(TaskRow.keyOf(parent)); // a collapsed parent would hide the input
+    this.#editor = { task: parent, create: true, draft: '', start: 0, end: 0, focused: true };
+    this.setTaskList(this.#taskList);
+  }
+
+  // The one-editor rule: false (after focusing it) when an unsaved editor is open, else closes any editor.
+  #claimEditor() {
+    if (!this.#editor) return true;
+    if (this.#isDirty()) {
+      this.#editorView.focus();
+      return false;
+    }
+    this.#closeEditor();
+    return true;
   }
 
   #startEdit(task) {
     const target = this.#taskList.locate(task);
     if (!target || target.file !== 'todo') return;
-    if (this.#editor) {
-      if (this.#isDirty()) return this.#editorView.focus(); // keep unsaved work; focus stays here
-      this.#closeEditor();
-    }
+    if (!this.#claimEditor()) return; // keeps unsaved work; focus stays there
     const raw = target.raw.replace(/\r$/, '');
     this.#editor = { task: target, draft: raw, start: raw.length, end: raw.length, focused: true };
     this.setTaskList(this.#taskList);
   }
 
   #isDirty() {
-    return this.#editorView.value.trim() !== this.#editor.task.raw.trim();
+    const { create, task } = this.#editor;
+    return create ? this.#editorView.value.trim() !== '' : this.#editorView.value.trim() !== task.raw.trim();
   }
 
   // Closes the editor without saving. In place when the page is current; else renders.
@@ -239,6 +262,24 @@ export class App {
     if (focusText) this.#focusText(task);
   }
 
+  // Enter in the new-subtask input: one commit, then the input stays open and empty for the next.
+  async #saveSubtask() {
+    const parent = this.#editor.task;
+    const text = this.#editorView.value;
+    if (text.trim() === '' || this.#subtaskBusy) return;
+    this.#subtaskBusy = true;
+    try {
+      await this.#addSubtask(parent, text, (allocated) => {
+        const open = this.#editor?.create && this.#editor.task === parent;
+        if (!open) return;
+        if (allocated !== null) this.#editor.parentId = allocated; // the parent line changed, so find it by its new id
+        if (this.#editorView.value === text) this.#editorView.clear(); // not if typing continued meanwhile
+      });
+    } finally {
+      this.#subtaskBusy = false;
+    }
+  }
+
   #focusText(task) {
     const key = `text:${TaskRow.keyOf(task)}`;
     [...this.#root.querySelectorAll('[data-key]')].find((e) => e.dataset.key === key)?.focus({ preventScroll: true });
@@ -249,6 +290,7 @@ export class App {
   }
 
   async #saveEdit() {
+    if (this.#editor.create) return this.#saveSubtask();
     const original = this.#editor.task;
     const line = this.#editorView.value.trim();
     if (line === original.raw.trim()) return this.#closeEditor({ focusText: true });
@@ -425,18 +467,28 @@ export class App {
       Object.assign(this.#editor, this.#editorView.snapshot());
       this.#editorView.dispose(); // the old input is about to be detached
     }
-    if (this.#taskList.locate(this.#editor.task)) {
+    const target = this.#editorTarget();
+    if (target) {
+      if (this.#editor.create) this.#editor.task = target; // keeps the key right after the parent got its id
       this.#editorView = new TaskEditor({
         draft: this.#editor.draft,
+        create: this.#editor.create,
         onSave: () => this.#saveEdit(),
         onCancel: () => this.#closeEditor({ focusText: true }),
         onBlur: () => this.#onEditorBlur(),
       });
       return;
     }
+    const message = this.#editor.create ? 'The parent task no longer exists.' : CHANGED_ON_DISK;
     this.#editor = null;
     this.#editorView = null;
-    this.toast.error(CHANGED_ON_DISK);
+    this.toast.error(message);
+  }
+
+  // The editor's task in the current list. A subtask's parent may have just been given an id.
+  #editorTarget() {
+    const { task, create, parentId } = this.#editor;
+    return this.#taskList.locate(task) ?? (create && parentId ? this.#taskList.byId(parentId) : null);
   }
 
   // Only section headers and row toggles carry a data-key.
@@ -624,7 +676,7 @@ export class App {
           highlightOpen: (task) => this.#highlightOpen(task),
           showTask: (id) => this.#showTask(id),
           clearNeeds: (task) => this.#clearNeeds(task),
-          addSubtask: (task) => this.#addSubtask(task),
+          addSubtask: (task) => this.#openSubtask(task),
           edit: (task) => this.#startEdit(task),
         },
       });
@@ -637,7 +689,7 @@ export class App {
   #editorFor() {
     if (!this.#editor) return null;
     const task = this.#taskList.locate(this.#editor.task);
-    return { key: TaskRow.keyOf(task), element: this.#editorView.element };
+    return { key: TaskRow.keyOf(task), element: this.#editorView.element, create: this.#editor.create };
   }
 
   // Inbox (null) first, then projects in order of first appearance.

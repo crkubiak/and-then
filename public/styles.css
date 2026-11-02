@@ -768,8 +768,17 @@ button.task-check:hover {
   line-height: 20px;
 }
 
+.task-edit::placeholder {
+  color: var(--fg-muted);
+}
+
 .task-row.is-editing .task-main > :not(.task-edit) {
   display: none;
+}
+
+/* New-subtask input: sits at the top of the parent's children, in line with a child's description. */
+.task-new {
+  padding: var(--space-1) var(--space-2) var(--space-1) calc(var(--toggle) + 18px + var(--space-2) * 2);
 }
 
 .is-complete .task-text {
