@@ -81,10 +81,10 @@ This phase comes before the write actions so that the conflict handling in Phase
 
 ## Phase 9: Toolbar and remaining panels
 
-- [ ] 9.1 `Toolbar`: Hide Completed, Expand/Collapse All
-- [ ] 9.2 Problems panel (§5.6) using `Validator`
-- [ ] 9.3 Sweep button with the eligible count, append-then-remove execution, and toast (§6)
-- [ ] 9.4 `RawDrawer`: edit both files, then save, re-parse, and re-render (§5.5)
+- [x] 9.1 `Toolbar`: Hide Completed, Expand/Collapse All
+- [x] 9.2 Problems panel (§5.6) using `Validator`
+- [x] 9.3 Sweep button with the eligible count, append-then-remove execution, and toast (§6)
+- [x] 9.4 `RawDrawer`: edit both files, then save, re-parse, and re-render (§5.5)
 
 **Check:** a sweep moves the right lines. Test this by backdating completion dates in the sample data.
 
@@ -119,8 +119,8 @@ public/
   js/
     main.js
     model/      Task.js, TaskParser.js, TaskSerializer.js, TaskList.js, IdAllocator.js
-    rules/      CompletionRules.js, VisibilityRules.js, SweepRules.js, Validator.js
-    io/         FileStore.js
-    ui/         App.js, Toolbar.js, ProjectSection.js, TaskRow.js, TaskInput.js, RawDrawer.js, ProblemsPanel.js, Toast.js
+    rules/      CompletionRules.js, VisibilityRules.js, SweepRules.js, SortOrder.js, Validator.js, NewTaskRules.js, EditRules.js
+    io/         FileStore.js, LiveSync.js
+    ui/         App.js, Toolbar.js, ProjectSection.js, ProjectPalette.js, TaskRow.js, TaskInput.js, TaskEditor.js, RawDrawer.js, ProblemsPanel.js, Toast.js
 data/       todo.txt, done.txt (gitignored)
 ```
