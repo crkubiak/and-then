@@ -1,6 +1,7 @@
 import { ProjectPalette } from './ProjectPalette.js';
 import { SortOrder } from '../rules/SortOrder.js';
 import { TaskRow } from './TaskRow.js';
+import { VisibilityRules } from '../rules/VisibilityRules.js';
 
 const STORAGE_KEY = 'taskflow.collapsed';
 
@@ -13,7 +14,7 @@ export class ProjectSection {
 
   // `project` is null for Inbox. `tasks` is the section's roots and all descendants;
   // `roots` are the top-level tasks the tree renders from.
-  constructor({ project, accent, roots, tasks, taskList, palette, today, collapsedKeys, actions, editor = null }) {
+  constructor({ project, accent, roots, tasks, taskList, palette, today, collapsedKeys, actions, editor = null, hideCompleted = false }) {
     this.#key = project ?? '';
     this.#section = document.createElement('section');
     this.#section.className = 'project-section';
@@ -21,7 +22,7 @@ export class ProjectSection {
 
     const bodyId = `project-body-${ProjectSection.#nextId++}`;
     this.#button = this.#buildHeader(project, tasks, bodyId);
-    this.#body = this.#buildBody(roots, taskList, palette, today, bodyId, collapsedKeys, actions, editor);
+    this.#body = this.#buildBody(roots, taskList, palette, today, bodyId, collapsedKeys, actions, editor, hideCompleted);
     this.#section.append(this.#button, this.#body);
 
     this.#button.addEventListener('click', () => this.setCollapsed(!this.isCollapsed));
@@ -85,11 +86,14 @@ export class ProjectSection {
     return bar;
   }
 
-  #buildBody(roots, taskList, palette, today, bodyId, collapsedKeys, actions, editor) {
+  #buildBody(roots, taskList, palette, today, bodyId, collapsedKeys, actions, editor, hideCompleted) {
     const body = this.#el('div', 'project-body');
     body.id = bodyId;
-    for (const task of SortOrder.sort(roots)) {
-      body.append(new TaskRow({ task, taskList, palette, today, collapsedKeys, actions, editor }).element);
+    const shown = roots.filter((t) => VisibilityRules.isVisible(taskList, t, { hideCompleted }));
+    // Header counts still include hidden tasks; only the rows are filtered.
+    if (shown.length === 0) body.append(this.#el('p', 'project-empty', 'All done'));
+    for (const task of SortOrder.sort(shown)) {
+      body.append(new TaskRow({ task, taskList, palette, today, collapsedKeys, actions, editor, hideCompleted }).element);
     }
     return body;
   }

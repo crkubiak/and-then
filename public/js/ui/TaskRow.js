@@ -18,6 +18,7 @@ export class TaskRow {
   #collapsedKeys;
   #actions;
   #editor;
+  #hideCompleted;
   #node;
   #children = null;
   #toggle = null;
@@ -25,8 +26,10 @@ export class TaskRow {
 
   // `collapsedKeys` is the App-owned Set of collapsed task keys (see TaskRow.keyOf).
   // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task), showTask(id), addSubtask(task), edit(task).
+  // `hideCompleted` applies VisibilityRules (§4.3) to this row's children.
   // `editor` is { key, element }: the open inline editor, shown in place of the description on the row with that key.
-  constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {}, editor = null }) {
+  constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {}, editor = null, hideCompleted = false }) {
+    this.#hideCompleted = hideCompleted;
     this.#task = task;
     this.#editor = editor;
     this.#actions = actions;
@@ -81,7 +84,7 @@ export class TaskRow {
   }
 
   #toggleOrSpacer() {
-    if (this.#taskList.children(this.#task).length === 0) return TaskRow.#el('span', 'task-spacer');
+    if (this.#visibleChildren().length === 0) return TaskRow.#el('span', 'task-spacer');
     const button = TaskRow.#el('button', 'task-toggle');
     button.type = 'button';
     button.setAttribute('aria-expanded', 'true');
@@ -107,9 +110,14 @@ export class TaskRow {
     else this.#collapsedKeys.add(key);
   }
 
+  // Children left after Hide Completed (all of them when it is off).
+  #visibleChildren() {
+    return this.#taskList.children(this.#task).filter((t) => VisibilityRules.isVisible(this.#taskList, t, { hideCompleted: this.#hideCompleted }));
+  }
+
   // Collapse state is session-only and lives in the App's Set, so it survives re-renders.
   #buildChildren() {
-    const kids = this.#taskList.children(this.#task);
+    const kids = this.#visibleChildren();
     if (kids.length === 0) return;
     this.#children = TaskRow.#el('div', 'task-children');
     this.#children.id = `task-children-${TaskRow.#nextId++}`;
@@ -119,7 +127,7 @@ export class TaskRow {
     this.#children.style.setProperty('--rail', `var(--${rail})`);
     this.#toggle.setAttribute('aria-controls', this.#children.id);
     for (const kid of SortOrder.sort(kids)) {
-      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions, editor: this.#editor });
+      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions, editor: this.#editor, hideCompleted: this.#hideCompleted });
       this.#children.append(row.element);
     }
     this.#node.append(this.#children);
@@ -205,6 +213,8 @@ export class TaskRow {
     for (const context of task.contexts) badges.push(TaskRow.#el('span', 'badge badge-context', `@${context}`));
     const due = this.#validDue();
     if (due) badges.push(this.#dueBadge(due));
+    // §4.3: a completed task kept visible only because something under it is still open.
+    if (this.#hideCompleted && VisibilityRules.isAnchor(this.#taskList, task)) badges.push(TaskRow.#el('span', 'badge badge-anchor', 'Open subtasks'));
     return badges;
   }
 

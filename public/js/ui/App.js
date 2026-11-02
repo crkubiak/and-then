@@ -11,6 +11,7 @@ import { NewTaskRules } from '../rules/NewTaskRules.js';
 import { TaskEditor } from './TaskEditor.js';
 import { TaskInput } from './TaskInput.js';
 import { TaskRow } from './TaskRow.js';
+import { Toolbar } from './Toolbar.js';
 import { Toast } from './Toast.js';
 
 const FLASH_MS = 1500;
@@ -28,6 +29,11 @@ export class App {
   #dot = null;
   #toast = null;
   #taskInput = new TaskInput({ onSubmit: (text, pending) => this.#addTask(text, pending) });
+  #toolbar = new Toolbar({
+    onHideChange: () => this.setTaskList(this.#taskList),
+    onExpandAll: () => this.#setAllExpanded(true),
+    onCollapseAll: () => this.#setAllExpanded(false),
+  });
   #tail = Promise.resolve(); // commits and reloads run one at a time through this chain
   #reloadQueued = false;
   #latestVersion = null;
@@ -301,6 +307,18 @@ export class App {
     if (changed) this.setTaskList(list);
   }
 
+  // Expand All / Collapse All: every section and every parent row, then one re-render.
+  #setAllExpanded(expanded) {
+    for (const section of this.#sections.values()) section.setCollapsed(!expanded);
+    this.#collapsedKeys.clear();
+    if (!expanded) {
+      for (const task of this.#taskList.todoTasks) {
+        if (this.#taskList.children(task).length > 0) this.#collapsedKeys.add(TaskRow.keyOf(task));
+      }
+    }
+    this.setTaskList(this.#taskList);
+  }
+
   #rowsFor(tasks) {
     const keys = new Set(tasks.map((t) => TaskRow.keyOf(t)));
     return [...this.#root.querySelectorAll('.task-row')].filter((r) => keys.has(r.dataset.taskKey));
@@ -408,7 +426,8 @@ export class App {
 
     const main = document.createElement('main');
     main.className = 'app-main';
-    this.#root.replaceChildren(header, ...(withInput ? [this.#taskInput.element] : []), main);
+    const controls = withInput ? [this.#taskInput.element, ...(summary ? [this.#toolbar.element] : [])] : [];
+    this.#root.replaceChildren(header, ...controls, main);
     return main;
   }
 
@@ -462,6 +481,7 @@ export class App {
         today,
         collapsedKeys: this.#collapsedKeys,
         editor: this.#editorFor(),
+        hideCompleted: this.#toolbar.hideCompleted,
         actions: {
           complete: (task) => this.#complete(task),
           reopen: (task) => this.#reopen(task),
