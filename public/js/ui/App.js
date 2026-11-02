@@ -435,7 +435,7 @@ export class App {
     const box = this.#el('div', 'empty-state');
     box.append(
       this.#el('p', 'empty-title', 'No tasks yet'),
-      this.#el('p', 'empty-hint', 'Add lines to data/todo.txt, or see docs/FORMAT.md.'),
+      this.#el('p', 'empty-hint', 'Add a task above, or edit data/todo.txt (see docs/FORMAT.md).'),
     );
     return box;
   }

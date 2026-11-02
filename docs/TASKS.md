@@ -69,13 +69,13 @@ This phase comes before the write actions so that the conflict handling in Phase
 
 ## Phase 8: Write actions (§4, §5.3, §5.4, §7.2)
 
-- [ ] 8.1 Complete and reopen, with the parent lock, the descendant highlight, and ancestor reopen
-- [ ] 8.2 Blocked-by pill with scroll-to, and the dependency override confirmation
-- [ ] 8.3 `TaskInput`: add a task with an automatic creation date
-- [ ] 8.4 **+ Subtask**: ensure the parent has an ID, then pre-fill the root project and `parent:`
-- [ ] 8.5 Inline edit, with rejection of the project-mismatch cases (§3.2)
-- [ ] 8.6 Conflict retry: on `409`, reload, re-apply the action by `id:` or exact text, and toast if the line is gone
-- [ ] 8.7 `Toast`
+- [x] 8.1 Complete and reopen, with the parent lock, the descendant highlight, and ancestor reopen
+- [x] 8.2 Blocked-by pill with scroll-to, and the dependency override confirmation
+- [x] 8.3 `TaskInput`: add a task with an automatic creation date
+- [x] 8.4 **+ Subtask**: pre-fill the root project and `parent:`, giving the parent an ID in the same save as the subtask
+- [x] 8.5 Inline edit, with rejection of the project-mismatch cases (§3.2)
+- [x] 8.6 Conflict retry: on `409`, reload, re-apply the action by `id:` or exact text, and toast if the line is gone
+- [x] 8.7 `Toast`
 
 **Check:** every action produces the expected one-line diff in `todo.txt`. An agent edit made mid-action does not lose either change.
 
@@ -101,6 +101,8 @@ Items raised while reviewing the running app. Picked up after the core run (Phas
 - [ ] 11.2 Edited-task indicator. A task whose `id:` is known but whose line changed gets its own marker, distinct from new. Same storage, seen rules, and pill as 11.1.
 - [ ] 11.3 Collapsed rollup. A collapsed row shows a yellow "+N new" pill next to its subtask counter, counting new and edited tasks anywhere beneath it, at every collapsed ancestor level. Collapsed project headers get the same pill.
 - [ ] 11.4 Seen rules. A marker clears once the row has been on screen for about 1.5 seconds with the tab visible, or right away on click or focus. A task under a collapsed parent stays marked until it is expanded and seen.
+- [ ] 11.5 Duplicate id-less lines: two tasks with identical text share a key, so flash, focus restore, and edits hit the first match. Consider disambiguating by occurrence index.
+- [ ] 11.6 Toast: pause the timer on hover or focus, and keep error toasts up longer than info.
 
 ---
 
