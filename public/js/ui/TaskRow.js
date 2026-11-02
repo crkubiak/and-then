@@ -27,6 +27,7 @@ export class TaskRow {
   #node;
   #children = null;
   #toggle = null;
+  #pill = null; // rollup pill in the tail; hidden while the row is expanded
   static #nextId = 0;
 
   // `collapsedKeys` is the App-owned Set of collapsed task keys (see TaskRow.keyOf).
@@ -109,7 +110,8 @@ export class TaskRow {
     if (this.#task.file !== 'todo') return TaskRow.#el('span', empty ? 'task-text is-empty' : 'task-text', label);
     const button = TaskRow.#el('button', empty ? 'task-text task-text-edit is-empty' : 'task-text task-text-edit', label);
     button.type = 'button';
-    button.title = 'Edit task';
+    const edited = this.#editedKeys.get(TaskRow.keyOf(this.#task));
+    button.title = edited ? `Edit task. ${edited}` : 'Edit task'; // App resets it when the marker clears
     button.dataset.key = `text:${TaskRow.keyOf(this.#task)}`; // lets App restore focus after a re-render
     button.addEventListener('click', () => this.#actions.edit?.(this.#task));
     return button;
@@ -131,6 +133,7 @@ export class TaskRow {
 
   #setExpanded(expanded) {
     this.#toggle.setAttribute('aria-expanded', String(expanded));
+    if (this.#pill) this.#pill.hidden = expanded;
     this.#children.hidden = !expanded;
     this.#node.classList.toggle('is-collapsed', !expanded);
   }
@@ -289,6 +292,12 @@ export class TaskRow {
       tail.append(add);
     }
     if (this.#taskList.children(task).length > 0) {
+      const subtree = this.#taskList.descendants(task).filter((t) => this.#isVisible(t)).map((t) => TaskRow.keyOf(t));
+      this.#pill = TaskRow.rollupPill(subtree, this.#newKeys, this.#editedKeys);
+      if (this.#pill) {
+        this.#pill.hidden = !this.#collapsedKeys.has(TaskRow.keyOf(task));
+        tail.append(this.#pill);
+      }
       const { done, total } = VisibilityRules.subtaskProgress(this.#taskList, task);
       tail.append(TaskRow.#el('span', 'task-progress', `${done}/${total}`));
     }
@@ -333,6 +342,29 @@ export class TaskRow {
     badge.setAttribute('role', 'img');
     badge.setAttribute('aria-label', `${error ? 'Error' : 'Warning'}: ${messages}`);
     return badge;
+  }
+
+  // The "+N new" pill shown on a collapsed row or project header for the unseen tasks beneath it,
+  // or null when there are none. It remembers just those keys so refreshRollup can shrink it in place.
+  static rollupPill(keys, newKeys, editedKeys) {
+    const unseen = keys.filter((key) => newKeys.has(key) || editedKeys.has(key));
+    if (unseen.length === 0) return null;
+    const pill = TaskRow.#el('span', 'pill-rollup');
+    pill.dataset.keys = unseen.join('\n');
+    TaskRow.refreshRollup(pill, newKeys, editedKeys);
+    return pill;
+  }
+
+  // Recounts a pill against the current markers; removes it when nothing beneath is unseen.
+  static refreshRollup(pill, newKeys, editedKeys) {
+    const keys = pill.dataset.keys.split('\n');
+    const fresh = keys.filter((key) => newKeys.has(key)).length;
+    const edited = keys.filter((key) => !newKeys.has(key) && editedKeys.has(key)).length;
+    if (fresh + edited === 0) return pill.remove();
+    const parts = [];
+    if (fresh > 0) parts.push(`+${fresh} new`);
+    if (edited > 0) parts.push(`${edited} edited`);
+    pill.textContent = parts.join(' · ');
   }
 
   // Stable across reloads: the id when the task has one, else its exact line.

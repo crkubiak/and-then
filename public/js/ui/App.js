@@ -207,7 +207,10 @@ export class App {
       if (!gone.has(row.dataset.taskKey)) continue;
       row.classList.remove('is-new', 'is-edited');
       for (const mark of row.querySelectorAll('.seen-mark')) mark.remove();
+      const edit = row.querySelector('.task-text-edit');
+      if (edit) edit.title = 'Edit task';
     }
+    for (const pill of this.#root.querySelectorAll('.pill-rollup')) TaskRow.refreshRollup(pill, this.#newKeys, this.#editedKeys);
   }
 
   #complete(task) {

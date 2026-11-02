@@ -618,6 +618,21 @@ button.problem-item:hover {
   cursor: pointer;
 }
 
+.pill-rollup {
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--yellow);
+  color: var(--bg-deep);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.pill-rollup[hidden] {
+  display: none;
+}
+
 .pill-human:hover {
   outline: 2px solid var(--fg-muted);
 }

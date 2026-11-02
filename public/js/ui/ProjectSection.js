@@ -7,6 +7,7 @@ const STORAGE_KEY = 'taskflow.collapsed';
 export class ProjectSection {
   #key;
   #button;
+  #pill = null; // rollup pill in the header, shown only while collapsed
   #body;
   #section;
   static #nextId = 0;
@@ -20,7 +21,7 @@ export class ProjectSection {
     this.#section.style.setProperty('--accent', `var(--${accent === 'muted' ? 'fg-muted' : accent})`);
 
     const bodyId = `project-body-${ProjectSection.#nextId++}`;
-    this.#button = this.#buildHeader(project, tasks, bodyId);
+    this.#button = this.#buildHeader(project, tasks, bodyId, isVisible, newKeys, editedKeys);
     this.#body = this.#buildBody(roots, taskList, palette, today, bodyId, collapsedKeys, actions, editor, hideCompleted, isVisible, problems, newKeys, editedKeys);
     this.#section.append(this.#button, this.#body);
 
@@ -47,10 +48,11 @@ export class ProjectSection {
   #apply(collapsed) {
     this.#button.setAttribute('aria-expanded', String(!collapsed));
     this.#body.hidden = collapsed;
+    if (this.#pill) this.#pill.hidden = !collapsed;
     this.#section.classList.toggle('is-collapsed', collapsed);
   }
 
-  #buildHeader(project, tasks, bodyId) {
+  #buildHeader(project, tasks, bodyId, isVisible, newKeys, editedKeys) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'project-header';
@@ -66,6 +68,8 @@ export class ProjectSection {
     const counts = this.#el('span', 'project-counts', `${total - done} active / ${total} total`);
 
     button.append(chevron, title, counts);
+    this.#pill = TaskRow.rollupPill(tasks.filter(isVisible).map((t) => TaskRow.keyOf(t)), newKeys, editedKeys);
+    if (this.#pill) button.append(this.#pill);
     const priority = ProjectSection.#highestOpenPriority(tasks);
     if (priority) button.append(TaskRow.priorityBadge(priority));
     button.append(this.#progressBar(done, total));
