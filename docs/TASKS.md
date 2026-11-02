@@ -41,7 +41,7 @@ Ordered so each phase can be run and checked before the next one starts. Section
 ## Phase 5: Rules (§4, §6.1)
 
 - [x] 5.1 `CompletionRules`: can a task be completed (descendants, dependency), plus reopening a task and its ancestors
-- [ ] 5.2 `VisibilityRules`: Hide Completed logic, with the anchor exception
+- [x] 5.2 `VisibilityRules`: Hide Completed logic, with the anchor exception
 - [ ] 5.3 `SweepRules`: eligible subtrees under the three criteria
 
 **Check:** scratch script against the sample data.
