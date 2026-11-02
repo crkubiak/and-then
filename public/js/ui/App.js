@@ -23,6 +23,10 @@ import { Toolbar } from './Toolbar.js';
 import { Toast } from './Toast.js';
 
 const FLASH_MS = 1500;
+const SEEN_MS = 1500; // an unseen row must stay mostly on screen this long to count as seen
+const SEEN_RATIO = 0.5;
+const BATCH_MS = 50; // rows that come due close together are marked seen in one go
+const FADE_MS = 300;
 const MAX_SAVE_ATTEMPTS = 3; // first try plus two re-applications after a 409
 const CHANGED_ON_DISK = 'That task changed on disk. Your edit was not saved.';
 const RAW_CHANGED = 'The files changed on disk while you were editing. Load latest, then re-apply your edit.';
@@ -66,6 +70,11 @@ export class App {
   #entries = new Map(); // todo.txt task key to raw line, rebuilt each render
   #newKeys = new Set(); // keys of tasks not yet seen, rebuilt each render and shrunk by #markSeen
   #editedKeys = new Map(); // keys of seen tasks whose line changed since, to a tooltip summary; same lifecycle as #newKeys
+  #observer = null; // IntersectionObserver over the unseen rows, or null where unsupported
+  #onScreen = new Set(); // unseen rows at least half visible
+  #seenTimers = new Map(); // unseen row to its pending timeout
+  #due = new Set(); // keys whose timer fired, waiting for the batch
+  #dueTimer = null;
   #sections = new Map(); // project (null = Inbox) to its ProjectSection, rebuilt each render
 
   constructor(root, { store = new FileStore() } = {}) {
@@ -192,8 +201,8 @@ export class App {
     return new Map(list.todoTasks.map((task) => [TaskRow.keyOf(task), task.raw]));
   }
 
-  // The one place a marker (new or edited) clears (click and focus now; the on-screen timer joins it
-  // in 11.4). Records the current line and updates the rows in place, with no re-render.
+  // The one place a marker (new or edited) clears: click, focus, or the on-screen timer. Records the
+  // current line and updates the rows in place, with no re-render.
   #markSeen(keys) {
     const fresh = [...keys].filter((key) => this.#newKeys.has(key) || this.#editedKeys.has(key));
     if (fresh.length === 0) return;
@@ -206,11 +215,82 @@ export class App {
     for (const row of this.#root.querySelectorAll('.task-row')) {
       if (!gone.has(row.dataset.taskKey)) continue;
       row.classList.remove('is-new', 'is-edited');
-      for (const mark of row.querySelectorAll('.seen-mark')) mark.remove();
+      this.#observer?.unobserve(row);
+      this.#onScreen.delete(row);
+      this.#disarm(row);
+      for (const mark of row.querySelectorAll('.seen-mark')) {
+        if (mark.classList.contains('sr-only')) {
+          mark.remove();
+        } else {
+          mark.classList.add('is-fading'); // CSS fades it; a re-render in the meantime simply drops it
+          setTimeout(() => mark.remove(), FADE_MS);
+        }
+      }
       const edit = row.querySelector('.task-text-edit');
       if (edit) edit.title = 'Edit task';
     }
     for (const pill of this.#root.querySelectorAll('.pill-rollup')) TaskRow.refreshRollup(pill, this.#newKeys, this.#editedKeys);
+  }
+
+  // Time-on-screen rule: watches the unseen rows after each render. A row at least half visible for
+  // SEEN_MS in a visible tab is marked seen. Without IntersectionObserver only click and focus clear.
+  #observeUnseen() {
+    if (typeof IntersectionObserver === 'undefined') return;
+    if (!this.#observer) {
+      this.#observer = new IntersectionObserver((entries) => this.#onIntersect(entries), { threshold: [0, SEEN_RATIO] });
+      document.addEventListener('visibilitychange', () => this.#onVisibility());
+    }
+    this.#observer.disconnect();
+    for (const timer of this.#seenTimers.values()) clearTimeout(timer);
+    this.#seenTimers.clear();
+    this.#onScreen.clear();
+    for (const row of this.#root.querySelectorAll('.task-row')) {
+      if (row.classList.contains('is-new') || row.classList.contains('is-edited')) this.#observer.observe(row);
+    }
+  }
+
+  #onIntersect(entries) {
+    for (const { target: row, isIntersecting, intersectionRatio } of entries) {
+      // A row under a collapsed parent or section is hidden, so it never counts as on screen.
+      if (isIntersecting && intersectionRatio >= SEEN_RATIO && row.closest('[hidden]') === null) {
+        this.#onScreen.add(row);
+        this.#arm(row);
+      } else {
+        this.#onScreen.delete(row);
+        this.#disarm(row);
+      }
+    }
+  }
+
+  #onVisibility() {
+    if (document.visibilityState === 'hidden') {
+      for (const row of [...this.#seenTimers.keys()]) this.#disarm(row);
+    } else {
+      for (const row of this.#onScreen) this.#arm(row);
+    }
+  }
+
+  #arm(row) {
+    if (this.#seenTimers.has(row) || document.visibilityState === 'hidden') return;
+    this.#seenTimers.set(row, setTimeout(() => {
+      this.#seenTimers.delete(row);
+      this.#queueSeen(row.dataset.taskKey);
+    }, SEEN_MS));
+  }
+
+  #disarm(row) {
+    clearTimeout(this.#seenTimers.get(row));
+    this.#seenTimers.delete(row);
+  }
+
+  #queueSeen(key) {
+    this.#due.add(key);
+    this.#dueTimer ??= setTimeout(() => {
+      const keys = [...this.#due];
+      this.#due.clear();
+      this.#dueTimer = null;
+      this.#markSeen(keys);
+    }, BATCH_MS);
   }
 
   #complete(task) {
@@ -494,6 +574,7 @@ export class App {
     this.#render();
     window.scrollTo(0, scrollY);
     this.#restoreFocus(focusKey);
+    this.#observeUnseen();
     this.#taskInput.restore(inputState);
     if (this.#editor) this.#editorView.restore(this.#editor);
   }

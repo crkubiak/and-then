@@ -771,6 +771,11 @@ button.task-check:hover {
   margin-right: var(--space-2);
   border-radius: 50%;
   vertical-align: middle;
+  transition: opacity 300ms; /* removed after the fade; prefers-reduced-motion drops the transition */
+}
+
+.seen-dot.is-fading {
+  opacity: 0;
 }
 
 .seen-dot-new {
