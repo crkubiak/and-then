@@ -33,7 +33,7 @@ Ordered so each phase can be run and checked before the next one starts. Section
 
 - [x] 4.1 `Validator`: every check listed in §8, returning `{ file, line, severity, message }`
 - [x] 4.2 `validate.js` CLI with output format and exit codes as specified in §8
-- [ ] 4.3 `docs/FORMAT.md`: syntax, ID rule, subtask/project rule, sweep rule, and "run `node validate.js` after every edit"
+- [x] 4.3 `docs/FORMAT.md`: syntax, ID rule, subtask/project rule, sweep rule, and "run `node validate.js` after every edit"
 - [ ] 4.4 A sample `data/todo.txt` with valid tasks and one of each problem type
 
 **Check:** the CLI reports every planted problem and nothing else. The agent can now start editing the files.
