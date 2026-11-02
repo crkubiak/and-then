@@ -8,6 +8,9 @@ import { ProjectPalette } from './ProjectPalette.js';
 import { ProjectSection } from './ProjectSection.js';
 import { EditRules } from '../rules/EditRules.js';
 import { NewTaskRules } from '../rules/NewTaskRules.js';
+import { Validator } from '../rules/Validator.js';
+import { VisibilityRules } from '../rules/VisibilityRules.js';
+import { ProblemsPanel } from './ProblemsPanel.js';
 import { TaskEditor } from './TaskEditor.js';
 import { TaskInput } from './TaskInput.js';
 import { TaskRow } from './TaskRow.js';
@@ -33,7 +36,12 @@ export class App {
     onHideChange: () => this.setTaskList(this.#taskList),
     onExpandAll: () => this.#setAllExpanded(true),
     onCollapseAll: () => this.#setAllExpanded(false),
+    onProblemsToggle: () => this.#toggleProblems(),
   });
+  #problemsPanel = new ProblemsPanel({ onSelect: (task) => this.#revealTask(task) });
+  #problems = []; // validator problems plus their todo.txt task, rebuilt each render
+  #problemsOpen = false; // session-only; survives re-renders
+  #problemsByTask = new Map(); // task to its validator problems, rebuilt each render
   #tail = Promise.resolve(); // commits and reloads run one at a time through this chain
   #reloadQueued = false;
   #latestVersion = null;
@@ -272,9 +280,17 @@ export class App {
     this.#flash(open);
   }
 
-  // Blocked-by pill: reveal the blocking task, scroll to it, flash it, focus its checkbox.
+  // Blocked-by pill: reveal the blocking task.
   #showTask(id) {
     const target = this.#taskList.byId(id);
+    if (target?.file === 'todo' && this.#revealTask(target)) return;
+    if (!target || target.file !== 'todo') this.toast.info(`#${id} is not on this page.`);
+  }
+
+  // Reveals a task: un-collapses what hides it, scrolls to it, flashes it, focuses its checkbox.
+  // Returns false (after a toast) when it has no row, e.g. hidden by Hide Completed.
+  #revealTask(task) {
+    const target = this.#taskList.locate(task);
     if (target?.file === 'todo') {
       this.#expandTo([target]);
       const row = this.#rowsFor([target])[0];
@@ -285,10 +301,11 @@ export class App {
         const focusable = row.querySelector('.task-check') ?? row;
         if (focusable === row) row.tabIndex = -1;
         focusable.focus({ preventScroll: true });
-        return;
+        return true;
       }
     }
-    this.toast.info(`#${id} is not on this page.`);
+    this.toast.info(target ? 'Turn off Hide Completed to see that task.' : 'That task no longer exists.');
+    return false;
   }
 
   // Un-collapses what hides each task: its section (unless `stopAt` is given) and its
@@ -399,7 +416,46 @@ export class App {
     el?.focus({ preventScroll: true });
   }
 
+  #toggleProblems() {
+    this.#problemsOpen = !this.#problemsOpen;
+    this.#syncProblems();
+  }
+
+  // Validates once per render and hands the result to the toolbar, the panel and the rows.
+  #validate() {
+    const byLine = new Map();
+    for (const task of [...this.#taskList.todoTasks, ...this.#taskList.doneTasks]) {
+      byLine.set(`${task.file === 'todo' ? 'todo.txt' : 'done.txt'}:${task.lineNumber}`, task);
+    }
+    this.#problems = Validator.validate(this.#taskList).map((p) => {
+      const task = byLine.get(`${p.file}:${p.line}`) ?? null;
+      return { ...p, task: task?.file === 'todo' ? task : null }; // only todo.txt rows can be revealed
+    });
+    this.#problemsByTask = new Map();
+    for (const p of this.#problems) {
+      if (p.task) this.#problemsByTask.set(p.task, [...(this.#problemsByTask.get(p.task) ?? []), p]);
+    }
+    if (this.#problems.length === 0) this.#problemsOpen = false;
+    this.#syncProblems();
+  }
+
+  #syncProblems() {
+    const errors = this.#problems.filter((p) => p.severity === 'error').length;
+    this.#toolbar.setProblems({ errors, warnings: this.#problems.length - errors, open: this.#problemsOpen });
+    this.#problemsPanel.update(this.#problems, this.#problemsOpen);
+  }
+
+  // Hide Completed, except the task being edited and its ancestors, so its editor is never orphaned.
+  #isVisible(task) {
+    const hideCompleted = this.#toolbar.hideCompleted;
+    if (VisibilityRules.isVisible(this.#taskList, task, { hideCompleted })) return true;
+    if (!this.#editor || task.file !== 'todo') return false;
+    const edited = this.#taskList.locate(this.#editor.task);
+    return edited !== null && (edited === task || this.#taskList.ancestors(edited).includes(task));
+  }
+
   #render() {
+    this.#validate();
     const empty = this.#taskList.todoTasks.length === 0;
     const main = this.#renderShell(empty ? null : this.#buildSummary());
     if (empty) main.append(this.#buildEmptyState());
@@ -426,7 +482,8 @@ export class App {
 
     const main = document.createElement('main');
     main.className = 'app-main';
-    const controls = withInput ? [this.#taskInput.element, ...(summary ? [this.#toolbar.element] : [])] : [];
+    const bar = summary ? [this.#toolbar.element, this.#problemsPanel.element] : [];
+    const controls = withInput ? [this.#taskInput.element, ...bar] : [];
     this.#root.replaceChildren(header, ...controls, main);
     return main;
   }
@@ -482,6 +539,8 @@ export class App {
         collapsedKeys: this.#collapsedKeys,
         editor: this.#editorFor(),
         hideCompleted: this.#toolbar.hideCompleted,
+        isVisible: (task) => this.#isVisible(task),
+        problems: this.#problemsByTask,
         actions: {
           complete: (task) => this.#complete(task),
           reopen: (task) => this.#reopen(task),

@@ -197,6 +197,69 @@ body {
   color: var(--fg);
 }
 
+.toolbar-problems {
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.toolbar-problems.is-error {
+  background: var(--red);
+  color: var(--fg);
+}
+
+.toolbar-problems.is-warning {
+  background: var(--yellow);
+  color: var(--bg-deep);
+}
+
+.problems {
+  max-height: 40vh;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-1);
+  overflow-y: auto;
+  list-style: none;
+  background: var(--bg);
+  border-radius: var(--radius);
+}
+
+.problems[hidden] {
+  display: none;
+}
+
+.problem-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-badge);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.9375rem;
+  text-align: left;
+}
+
+button.problem-item {
+  cursor: pointer;
+}
+
+button.problem-item:hover {
+  background: var(--surface);
+}
+
+.problem-where {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.problem-message {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
 .app-main {
   display: flex;
   flex-direction: column;
@@ -378,6 +441,8 @@ body {
 .badge-project[data-accent="teal"] { color: var(--fg); }
 .badge-due-overdue { background: var(--red); color: var(--fg); }
 .badge-due-soon { background: var(--yellow); color: var(--bg-deep); }
+.badge-problem-error { background: var(--red); color: var(--fg); }
+.badge-problem-warning { background: var(--yellow); color: var(--bg-deep); }
 .badge-anchor { background: var(--yellow); color: var(--bg-deep); }
 .badge-due-later { padding: 0; color: var(--green); }
 

@@ -4,10 +4,11 @@ const STORAGE_KEY = 'taskflow.hideCompleted';
 // on every render, so a focused control survives (App restores focus by data-key).
 export class Toolbar {
   #checkbox;
+  #problems;
   #element;
 
   // `onHideChange()` runs after the toggle changes (read it back with `hideCompleted`).
-  constructor({ onHideChange, onExpandAll, onCollapseAll }) {
+  constructor({ onHideChange, onExpandAll, onCollapseAll, onProblemsToggle }) {
     this.#element = document.createElement('div');
     this.#element.className = 'toolbar';
     this.#element.setAttribute('role', 'toolbar');
@@ -32,10 +33,24 @@ export class Toolbar {
       Toolbar.#button('Expand All', 'toolbar:expand', onExpandAll),
       Toolbar.#button('Collapse All', 'toolbar:collapse', onCollapseAll),
     );
+    this.#problems = Toolbar.#button('', 'toolbar:problems', onProblemsToggle);
+    this.#problems.setAttribute('aria-controls', 'problems-panel');
+    this.#problems.setAttribute('aria-expanded', 'false');
+    this.#problems.hidden = true;
+    this.#element.append(this.#problems);
   }
 
   get element() {
     return this.#element;
+  }
+
+  // Shows the problem count (red when any error, yellow when warnings only); hidden at 0.
+  setProblems({ errors, warnings, open }) {
+    const count = errors + warnings;
+    this.#problems.hidden = count === 0;
+    this.#problems.className = `toolbar-button toolbar-problems ${errors > 0 ? 'is-error' : 'is-warning'}`;
+    this.#problems.textContent = `${count} ${count === 1 ? 'problem' : 'problems'}`;
+    this.#problems.setAttribute('aria-expanded', String(open));
   }
 
   get hideCompleted() {

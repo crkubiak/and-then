@@ -19,6 +19,8 @@ export class TaskRow {
   #actions;
   #editor;
   #hideCompleted;
+  #isVisible;
+  #problems;
   #node;
   #children = null;
   #toggle = null;
@@ -26,10 +28,13 @@ export class TaskRow {
 
   // `collapsedKeys` is the App-owned Set of collapsed task keys (see TaskRow.keyOf).
   // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task), showTask(id), addSubtask(task), edit(task).
-  // `hideCompleted` applies VisibilityRules (§4.3) to this row's children.
+  // `hideCompleted` only drives the anchor badge (§4.3); `isVisible(task)` decides which children render.
+  // `problems` maps a task to its validator problems, shown as a badge in the tail.
   // `editor` is { key, element }: the open inline editor, shown in place of the description on the row with that key.
-  constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {}, editor = null, hideCompleted = false }) {
+  constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {}, editor = null, hideCompleted = false, isVisible = () => true, problems = new Map() }) {
     this.#hideCompleted = hideCompleted;
+    this.#isVisible = isVisible;
+    this.#problems = problems;
     this.#task = task;
     this.#editor = editor;
     this.#actions = actions;
@@ -112,7 +117,7 @@ export class TaskRow {
 
   // Children left after Hide Completed (all of them when it is off).
   #visibleChildren() {
-    return this.#taskList.children(this.#task).filter((t) => VisibilityRules.isVisible(this.#taskList, t, { hideCompleted: this.#hideCompleted }));
+    return this.#taskList.children(this.#task).filter((t) => this.#isVisible(t));
   }
 
   // Collapse state is session-only and lives in the App's Set, so it survives re-renders.
@@ -127,7 +132,7 @@ export class TaskRow {
     this.#children.style.setProperty('--rail', `var(--${rail})`);
     this.#toggle.setAttribute('aria-controls', this.#children.id);
     for (const kid of SortOrder.sort(kids)) {
-      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions, editor: this.#editor, hideCompleted: this.#hideCompleted });
+      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions, editor: this.#editor, hideCompleted: this.#hideCompleted, isVisible: this.#isVisible, problems: this.#problems });
       this.#children.append(row.element);
     }
     this.#node.append(this.#children);
@@ -246,6 +251,8 @@ export class TaskRow {
       const { done, total } = VisibilityRules.subtaskProgress(this.#taskList, task);
       tail.append(TaskRow.#el('span', 'task-progress', `${done}/${total}`));
     }
+    const problems = this.#problems.get(task);
+    if (problems) tail.append(TaskRow.#problemBadge(problems));
     if (this.#taskList.isBlocked(task)) {
       const pill = TaskRow.#el('button', 'pill-blocked', `Blocked by #${task.depId}`);
       pill.type = 'button';
@@ -254,6 +261,16 @@ export class TaskRow {
       tail.append(pill);
     }
     if (task.id !== null) tail.append(TaskRow.#el('span', 'task-id', `#${task.id}`));
+  }
+
+  static #problemBadge(problems) {
+    const error = problems.some((p) => p.severity === 'error');
+    const badge = TaskRow.#el('span', `badge badge-problem-${error ? 'error' : 'warning'}`, error ? 'Error' : 'Warning');
+    const messages = problems.map((p) => p.message).join('; ');
+    badge.title = messages;
+    badge.setAttribute('role', 'img');
+    badge.setAttribute('aria-label', `${error ? 'Error' : 'Warning'}: ${messages}`);
+    return badge;
   }
 
   // Stable across reloads: the id when the task has one, else its exact line.
