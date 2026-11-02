@@ -172,7 +172,7 @@ Within each section, and within each sibling group, tasks sort by:
 - Checkbox (subject to §4), priority badge, description, and badges for context, secondary projects, due date or overdue status, Blocked-by, and validation problems.
 - Subtasks render indented under their parent with a tree guide line. The parent row has a collapse toggle.
 - **+ Subtask:** pre-fills the add input with `+RootProject parent:ID`. Nothing is written on click. If the parent lacks an `id:`, the prefill shows `parent:new`, and on submit the parent gets a fresh id in the same save as the new subtask.
-- **Inline edit:** clicking the description opens the full raw line for editing. Enter saves and Escape cancels. The only edits rejected are the project-mismatch cases in §3.2.
+- **Inline edit:** clicking the description opens the full raw line for editing. Enter saves and Escape cancels. Rejected edits: the project-mismatch cases in §3.2, an empty line or one with no words (deletion is not in v1), adding or removing the `x ` prefix (use the checkbox), changing or removing an existing `id:` or duplicating another, and a `parent:` that is missing, in `done.txt`, or would form a cycle. The add input rejects the same `id:` and `parent:` cases and `x ` lines. The raw drawer (§5.5) rejects nothing.
 
 ### 5.4 Add task input
 
@@ -272,7 +272,7 @@ The append happens before the removal so that a failure between the two steps du
 
 - **On `changed`:** reload both files and re-render. Expand/collapse state, scroll position, and any open inline edit are kept.
 - **Saving:** every UI action (complete, reopen, edit, add, sweep) is saved immediately, with no debounce, which keeps the window for a clash with an agent's edit small.
-- **Conflict:** if a save returns `409` because the agent changed the file first, the client reloads the files and re-applies the action to the fresh content, locating the line by `id:` or by exact text. If the line no longer exists, the action is dropped and a toast says so.
+- **Conflict:** if a save returns `409` because the agent changed the file first, the client reloads the files and re-applies the action to the fresh content, locating the line by `id:` or by exact text. If the line no longer exists, the action is dropped and a toast says so. An inline edit or raw drawer save is not re-applied when its line or file changed underneath it, since that would overwrite the agent's change. It is refused with a toast and the draft is kept.
 - **Open inline edit during an external change:** the edit stays open. On save, the conflict rule applies.
 - `localStorage` holds only UI preferences: collapse state and Hide Completed.
 

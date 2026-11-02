@@ -90,7 +90,7 @@ This phase comes before the write actions so that the conflict handling in Phase
 
 ## Phase 10: Acceptance pass
 
-- [ ] 10.1 Go through the §9 examples and each rule in §4 and §6 by hand in the UI
+- [x] 10.1 Go through the §9 examples and each rule in §4 and §6 by hand in the UI
 - [ ] 10.2 Have the agent make a set of edits following `FORMAT.md`, then confirm the live reload, the validator, and the Problems panel agree
 
 ## Phase 11: Review feedback
@@ -104,6 +104,8 @@ Items raised while reviewing the running app. Picked up after the core run (Phas
 - [ ] 11.5 Duplicate id-less lines: two tasks with identical text share a key, so flash, focus restore, and edits hit the first match. Consider disambiguating by occurrence index.
 - [ ] 11.6 Toast: pause the timer on hover or focus, and keep error toasts up longer than info.
 - [ ] 11.7 Inline subtask input. + Subtask opens an input directly under the parent row at the child indent. The user types only the description; the root project and `parent:` (with the parent's new id when needed) are added on save and never shown. Enter saves, Escape cancels. The top input stays for tasks without a parent. Update PRD §5.3.
+- [ ] 11.8 Validator: warn on a line with no description (only tags), which the UI now refuses to create.
+- [ ] 11.9 Hide the Blocked by pill on completed tasks. After a dependency override the task keeps `dep:`, so the pill still shows (ACCEPTANCE A1).
 
 ---
 
