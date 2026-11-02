@@ -101,7 +101,7 @@ Items raised while reviewing the running app. Picked up after the core run (Phas
 - [ ] 11.2 Edited-task indicator. A task whose `id:` is known but whose line changed gets its own marker, distinct from new. Same storage, seen rules, and pill as 11.1.
 - [ ] 11.3 Collapsed rollup. A collapsed row shows a yellow "+N new" pill next to its subtask counter, counting new and edited tasks anywhere beneath it, at every collapsed ancestor level. Collapsed project headers get the same pill.
 - [ ] 11.4 Seen rules. A marker clears once the row has been on screen for about 1.5 seconds with the tab visible, or right away on click or focus. A task under a collapsed parent stays marked until it is expanded and seen.
-- [ ] 11.5 Duplicate id-less lines: two tasks with identical text share a key, so flash, focus restore, and edits hit the first match. Consider disambiguating by occurrence index.
+- [x] 11.5 Duplicate id-less lines: two tasks with identical text share a key, so flash, focus restore, and edits hit the first match. Consider disambiguating by occurrence index.
 - [x] 11.6 Toast: pause the timer on hover or focus, and keep error toasts up longer than info.
 - [ ] 11.7 Inline subtask input. + Subtask opens an input directly under the parent row at the child indent. The user types only the description; the root project and `parent:` (with the parent's new id when needed) are added on save and never shown. Enter saves, Escape cancels. The top input stays for tasks without a parent. Update PRD §5.3.
 - [x] 11.8 Validator: warn on a line with no description (only tags), which the UI now refuses to create.

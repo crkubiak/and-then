@@ -275,7 +275,7 @@ export class TaskRow {
 
   // Stable across reloads: the id when the task has one, else its exact line.
   static keyOf(task) {
-    return task.id !== null ? `id:${task.id}` : `raw:${task.raw}`;
+    return task.id !== null ? `id:${task.id}` : `raw:${task.raw}#${task.occurrence}`;
   }
 
   // 'overdue' | 'soon' | 'later', or null when `due` isn't a YYYY-MM-DD date.

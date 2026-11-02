@@ -26,6 +26,7 @@ export class Task {
     this.contexts = contexts;
     this.tags = tags;
     this.duplicateKeys = duplicateKeys;
+    this.occurrence = 0; // set by TaskList: earlier identical id-less lines in the same file
   }
 
   get id() {

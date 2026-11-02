@@ -38,9 +38,15 @@ export class TaskList {
     const body = endsWithNewline ? text.slice(0, -eol.length) : text;
     const lines = text === '' ? [] : body.split(eol);
     const tasks = [];
+    const seen = new Map();
     lines.forEach((line, i) => {
       const task = TaskParser.parse(line, { file, lineNumber: i + 1 });
-      if (task) tasks.push(task);
+      if (!task) return;
+      if (task.id === null) {
+        task.occurrence = seen.get(task.raw) ?? 0;
+        seen.set(task.raw, task.occurrence + 1);
+      }
+      tasks.push(task);
     });
     return { lines, eol, endsWithNewline, tasks };
   }
@@ -228,12 +234,12 @@ export class TaskList {
     return TaskList.#fromState(state);
   }
 
-  // Finds the same task in this list: by id within the file, else by identical raw line.
+  // Finds the same task in this list: by id within the file, else by the n-th identical raw line.
   locate(task) {
     const tasks = task.file === 'todo' ? this.todoTasks : this.doneTasks;
     const match = task.id !== null
       ? tasks.find((t) => t.id === task.id)
-      : tasks.find((t) => t.raw === task.raw);
+      : tasks.find((t) => t.id === null && t.raw === task.raw && t.occurrence === task.occurrence);
     return match ?? null;
   }
 
