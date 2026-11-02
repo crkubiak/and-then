@@ -1,7 +1,8 @@
 // Transient bottom-left messages. The region lives outside App's #root so
 // re-renders never remove it.
 export class Toast {
-  static #DURATION_MS = 4000;
+  static #INFO_MS = 4000;
+  static #ERROR_MS = 8000;
   static #MAX_VISIBLE = 5;
 
   #region;
@@ -34,12 +35,40 @@ export class Toast {
     close.setAttribute('aria-label', 'Dismiss');
     close.textContent = '×';
 
+    // The timer pauses while the pointer is over the toast or focus is inside it,
+    // then resumes with the time that was left.
+    let remaining = kind === 'error' ? Toast.#ERROR_MS : Toast.#INFO_MS;
+    let timer = null;
+    let startedAt = 0;
+    let hovered = false;
+    let focused = false;
     const dismiss = () => {
       clearTimeout(timer);
       toast.remove();
     };
-    const timer = setTimeout(dismiss, Toast.#DURATION_MS);
+    const resume = () => {
+      if (hovered || focused || timer !== null) return;
+      startedAt = Date.now();
+      timer = setTimeout(dismiss, remaining);
+    };
+    const pause = () => {
+      if (timer === null) return;
+      clearTimeout(timer);
+      timer = null;
+      remaining = Math.max(0, remaining - (Date.now() - startedAt));
+    };
+    const hold = (isHover, on) => {
+      if (isHover) hovered = on;
+      else focused = on;
+      if (hovered || focused) pause();
+      else resume();
+    };
+    toast.addEventListener('mouseenter', () => hold(true, true));
+    toast.addEventListener('mouseleave', () => hold(true, false));
+    toast.addEventListener('focusin', () => hold(false, true));
+    toast.addEventListener('focusout', () => hold(false, false));
     close.addEventListener('click', dismiss);
+    resume();
     toast.append(text, close);
 
     this.#region.append(toast);
