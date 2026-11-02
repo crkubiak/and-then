@@ -69,7 +69,7 @@ Method: scripts against the real code. Rules classes directly, `App` with a fake
 | §4.1 Clicking lock highlights open descendants, no write | Pass | `is-flash` on rows 2,3,5,6; zero PUTs; also expands collapsed rows |
 | §4.1 Reopening a subtask reopens every completed ancestor | Pass | Rules; UI diff shows exactly 2 changed lines |
 | §4.1 Parent complete in file with open subtasks: warning, stays visible | Pass | `completed-parent-open-children`; anchor with Hide Completed on |
-| §4.2 "Blocked by #ID" pill when target incomplete | Pass | UI. See ambiguity A1 |
+| §4.2 "Blocked by #ID" pill when target incomplete | Pass | UI. A1 resolved: pill shows on open tasks only |
 | §4.2 Pill click scrolls to and highlights target (expands collapsed row or section) | Pass | `scrollIntoView` call, `is-flash`, focus on checkbox. Visual result is in the checklist |
 | §4.2 Override asks "#12 is not complete. Complete anyway?", keeps `dep:` | Pass | Decline writes nothing; confirm writes `x ... dep:2` |
 | §4.3 Off: all tasks shown | Pass | Row counts |
@@ -124,7 +124,7 @@ Method: scripts against the real code. Rules classes directly, `App` with a fake
 
 ### Tally
 
-79 rows: 77 Pass, 1 Fail (F1), 1 Not verifiable without a browser. 169 scripted checks ran (the 79 rows aggregate them); one automated check, the A1 pill observation, is reported as an ambiguity, not a failure.
+79 rows: 77 Pass, 1 Fail (F1), 1 Not verifiable without a browser. 169 scripted checks ran (the 79 rows aggregate them); the A1 pill observation was reported as an ambiguity and is now resolved (11.9).
 
 ## 2. Failures
 
@@ -149,7 +149,7 @@ Accepted, as the PRD implies: a second `parent:` token, a repeated key. The Prob
 
 ## 3. Ambiguities and observations
 
-- **A1. Completed row still shows "Blocked by #ID".** After the §4.2 override, the completed task keeps `dep:2` and the target is still open, so its row still shows the yellow pill. `isBlocked` ignores the task's own state. PRD §4.2 says "a task whose dep target is incomplete", so this is literal. Decide whether a completed task should show it. The "blocked" count in the summary counts open tasks only.
+- **A1. Completed row still shows "Blocked by #ID". Resolved (11.9).** `TaskList.isBlocked` now returns false for completed tasks, so the pill is gone after an override while `dep:` stays on the line. PRD §4.2 now says "open task".
 - **A2. Edit vs external change of the same line.** §7.2 says to re-apply by `id:` or exact text. Inline edit replaces the whole line, so re-applying would overwrite the agent's change. The code instead refuses when the line text changed: "That task changed on disk. Your edit was not saved." The editor stays open with the draft. Safer, but not literally the PRD rule.
 - **A3. Completed task with no completion date is never swept.** Not in the PRD. The validator warns `missing-completion-date`.
 - **A4. Singular wording.** Lock tooltip says "1 remaining subtask", toast says "Swept 1 task". The PRD only gives the plural.

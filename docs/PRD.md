@@ -132,8 +132,8 @@ The app never rewrites a line the user didn't act on. File order, unknown tokens
 
 ### 4.2 Dependencies
 
-- A task whose `dep:` target is incomplete shows a **"Blocked by #ID"** pill. Clicking the pill scrolls to the blocking task and highlights it.
-- **Override:** checking a blocked task asks *"#12 is not complete. Complete anyway?"* If you confirm, the task is marked complete. Its `dep:12` token stays on the line, so the history of what it was waiting on is not lost.
+- An open task whose `dep:` target is incomplete shows a **"Blocked by #ID"** pill. Clicking the pill scrolls to the blocking task and highlights it.
+- **Override:** checking a blocked task asks *"#12 is not complete. Complete anyway?"* If you confirm, the task is marked complete. Its `dep:12` token stays on the line, so the history of what it was waiting on is not lost. A completed task no longer shows the pill.
 
 ### 4.3 Hide Completed toggle
 

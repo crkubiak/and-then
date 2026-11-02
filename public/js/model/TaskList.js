@@ -184,8 +184,9 @@ export class TaskList {
     return this.depTarget(task) ? 'ok' : 'missing';
   }
 
-  // A target archived to done.txt counts as satisfied; a missing one is ignored.
+  // Only open tasks are blocked. A target archived to done.txt counts as satisfied; a missing one is ignored.
   isBlocked(task) {
+    if (task.complete) return false;
     const target = this.depTarget(task);
     return Boolean(target) && target.file === 'todo' && !target.complete;
   }
