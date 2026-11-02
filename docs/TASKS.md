@@ -91,7 +91,7 @@ This phase comes before the write actions so that the conflict handling in Phase
 ## Phase 10: Acceptance pass
 
 - [x] 10.1 Go through the §9 examples and each rule in §4 and §6 by hand in the UI
-- [ ] 10.2 Have the agent make a set of edits following `FORMAT.md`, then confirm the live reload, the validator, and the Problems panel agree
+- [x] 10.2 Have the agent make a set of edits following `FORMAT.md`, then confirm the live reload, the validator, and the Problems panel agree
 
 ## Phase 11: Review feedback
 
