@@ -3,7 +3,8 @@
 export class TaskSerializer {
   static complete(task, date) {
     if (task.complete) return TaskSerializer.#line(task);
-    const body = TaskSerializer.#dropTag(task.body, 'wip'); // an agent's in-progress mark ends with the task
+    // An agent's in-progress and needs-human marks end with the task.
+    const body = TaskSerializer.#dropTag(TaskSerializer.#dropTag(task.body, 'wip'), 'needs');
     return TaskSerializer.#join(['x', date, task.creationDate, TaskSerializer.#priority(task)], body);
   }
 
@@ -17,6 +18,11 @@ export class TaskSerializer {
     if (Object.hasOwn(task.tags, key)) return line;
     const gap = /\s$/.test(line) ? '' : ' ';
     return `${line}${gap}${key}:${value}`;
+  }
+
+  // The whole line without any `key:value` token of that key. Everything else stays exact.
+  static removeTag(task, key) {
+    return TaskSerializer.#dropTag(TaskSerializer.#line(task), key);
   }
 
   // Removes every `key:value` token and one adjacent run of spaces; other spacing is untouched.

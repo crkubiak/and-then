@@ -31,6 +31,8 @@ export class App {
   #store;
   #taskList = null;
   #collapsedKeys = new Set(); // collapsed task rows, session-only (see TaskRow.keyOf)
+  #needsIndex = -1; // cursor for the "N need you" jump
+  #needsKeys = '';
   #status = 'reconnecting';
   #dot = null;
   #toast = null;
@@ -287,6 +289,31 @@ export class App {
     this.#flash(open);
   }
 
+  // "N need you": reveal the next open needs:human task in display order, wrapping at the end.
+  // The cursor restarts when the set of tasks changes.
+  #showNextNeedsHuman() {
+    const tasks = this.#taskList.todoTasks.filter((t) => !t.complete && t.needs === 'human');
+    const byKey = new Map(tasks.map((t) => [TaskRow.keyOf(t), t]));
+    const ordered = this.#rowsFor(tasks).map((r) => byKey.get(r.dataset.taskKey)).filter(Boolean);
+    if (ordered.length === 0) return;
+    const keys = ordered.map((t) => TaskRow.keyOf(t)).sort().join('\n');
+    if (keys !== this.#needsKeys) this.#needsIndex = -1;
+    this.#needsKeys = keys;
+    this.#needsIndex = (this.#needsIndex + 1) % ordered.length;
+    this.#revealTask(ordered[this.#needsIndex]);
+  }
+
+  // Needs-human pill: after confirming, drop the token so the task is back with the agent.
+  #clearNeeds(task) {
+    if (!window.confirm('Mark this as handled? This removes needs:human.')) return;
+    return this.#commit((list) => {
+      const target = list.locate(task);
+      if (!target) return 'That task no longer exists.';
+      if (target.complete || target.needs !== 'human') return 'That task no longer needs you.';
+      return list.replaceLine(target, TaskSerializer.removeTag(target, 'needs'));
+    });
+  }
+
   // Blocked-by pill: reveal the blocking task.
   #showTask(id) {
     const target = this.#taskList.byId(id);
@@ -539,6 +566,7 @@ export class App {
     const overdue = kinds.filter((k) => k === 'overdue').length;
     const soon = kinds.filter((k) => k === 'soon').length;
     const blocked = open.filter((t) => this.#taskList.isBlocked(t)).length;
+    const needsYou = open.filter((t) => t.needs === 'human').length;
 
     const summary = this.#el('p', 'summary');
     const count = this.#el('span', 'summary-open');
@@ -547,6 +575,12 @@ export class App {
     if (overdue > 0) summary.append(this.#el('span', 'badge badge-due-overdue', `${overdue} overdue`));
     if (soon > 0) summary.append(this.#el('span', 'badge badge-due-soon', `${soon} due soon`));
     if (blocked > 0) summary.append(this.#el('span', 'pill-blocked', `${blocked} blocked`));
+    if (needsYou > 0) {
+      const button = this.#el('button', 'pill-human', `${needsYou} need you`);
+      button.type = 'button';
+      button.addEventListener('click', () => this.#showNextNeedsHuman());
+      summary.append(button);
+    }
     return summary;
   }
 
@@ -589,6 +623,7 @@ export class App {
           reopen: (task) => this.#reopen(task),
           highlightOpen: (task) => this.#highlightOpen(task),
           showTask: (id) => this.#showTask(id),
+          clearNeeds: (task) => this.#clearNeeds(task),
           addSubtask: (task) => this.#addSubtask(task),
           edit: (task) => this.#startEdit(task),
         },

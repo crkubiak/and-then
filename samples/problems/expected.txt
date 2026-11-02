@@ -17,4 +17,6 @@ todo.txt:19  warning  completed parent has 1 open subtask
 todo.txt:21  warning  line has no description
 todo.txt:22  error    open task has no creation date
 todo.txt:23  warning  completed task still has wip:
-14 errors, 5 warnings
+todo.txt:24  warning  completed task still has needs:
+todo.txt:25  warning  needs: only supports human
+14 errors, 7 warnings

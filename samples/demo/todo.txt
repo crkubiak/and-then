@@ -20,7 +20,7 @@ x 2026-10-29 2026-10-16 Review analytics requirements parent:15 id:18
 2026-10-17 Set up redirect for the old pricing URL parent:15 id:19
 2026-10-30 Audit page load speed +Website @laptop due:2026-12-01 wip:Opus_5.5
 (B) 2026-11-01 Call dentist @phone due:2026-11-03
-2026-11-01 Buy birthday gift @errands
+2026-11-01 Buy birthday gift @errands needs:human
 2026-10-29 Read the migration guide
 2026-10-29 Reply to conference invite @laptop due:2026-10-30
 x 2026-09-20 2026-09-05 Migrate wiki +Infra id:25

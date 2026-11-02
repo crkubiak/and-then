@@ -45,6 +45,10 @@ export class Task {
     return this.#tag('by');
   }
 
+  get needs() {
+    return this.#tag('needs');
+  }
+
   get wip() {
     return this.#tag('wip');
   }

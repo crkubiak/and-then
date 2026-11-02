@@ -6,7 +6,7 @@ import { VisibilityRules } from '../rules/VisibilityRules.js';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const HIDDEN_TAG = /^(id|parent|dep|due|by|wip):\S*$/;
+const HIDDEN_TAG = /^(id|parent|dep|due|by|wip|needs):\S*$/;
 const DUE_SOON_DAYS = 3;
 
 // One task plus, nested beneath it, a container with a TaskRow per child.
@@ -241,6 +241,14 @@ export class TaskRow {
 
   #appendTail(tail) {
     const task = this.#task;
+    if (task.needs === 'human' && task.file === 'todo' && !task.complete) {
+      const pill = TaskRow.#el('button', 'pill-human', 'Human');
+      pill.type = 'button';
+      pill.title = 'Waiting on you';
+      pill.setAttribute('aria-label', `Waiting on you: ${this.#visibleText()}. Mark as handled`);
+      pill.addEventListener('click', () => this.#actions.clearNeeds?.(task));
+      tail.append(pill);
+    }
     if (task.file === 'todo' && !task.complete) {
       const add = TaskRow.#el('button', 'task-add-sub', '+ Subtask');
       add.type = 'button';
