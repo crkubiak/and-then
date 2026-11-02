@@ -20,6 +20,7 @@ export class App {
   #tail = Promise.resolve(); // commits and reloads run one at a time through this chain
   #reloadQueued = false;
   #latestVersion = null;
+  #sections = new Map(); // project (null = Inbox) to its ProjectSection, rebuilt each render
 
   constructor(root, { store = new FileStore() } = {}) {
     this.#root = root;
@@ -127,22 +128,57 @@ export class App {
     });
   }
 
-  // Locked checkbox: expand collapsed branches down to the open descendants, then flash them.
+  // Locked checkbox: expand down to the open descendants, then flash them.
   #highlightOpen(task) {
-    const list = this.#taskList;
-    const target = list.locate(task);
+    const target = this.#taskList.locate(task);
     if (!target) return;
-    const open = CompletionRules.check(list, target).openDescendants;
-    let expanded = false;
-    for (const d of open) {
-      for (let p = list.parent(d); p; p = list.parent(p)) {
-        if (this.#collapsedKeys.delete(TaskRow.keyOf(p))) expanded = true;
-        if (p === target) break;
+    const open = CompletionRules.check(this.#taskList, target).openDescendants;
+    this.#expandTo(open, target);
+    this.#flash(open);
+  }
+
+  // Blocked-by pill: reveal the blocking task, scroll to it, flash it, focus its checkbox.
+  #showTask(id) {
+    const target = this.#taskList.byId(id);
+    if (target?.file === 'todo') {
+      this.#expandTo([target]);
+      const row = this.#rowsFor([target])[0];
+      if (row) {
+        const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        row.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+        this.#flash([target]);
+        const focusable = row.querySelector('.task-check') ?? row;
+        if (focusable === row) row.tabIndex = -1;
+        focusable.focus({ preventScroll: true });
+        return;
       }
     }
-    if (expanded) this.setTaskList(list);
-    const keys = new Set(open.map((t) => TaskRow.keyOf(t)));
-    const rows = [...this.#root.querySelectorAll('.task-row')].filter((r) => keys.has(r.dataset.taskKey));
+    this.toast.info(`#${id} is not on this page.`);
+  }
+
+  // Un-collapses what hides each task: its section (unless `stopAt` is given) and its
+  // collapsed ancestors, up to and including `stopAt`. Re-renders once if ancestors changed.
+  #expandTo(tasks, stopAt = null) {
+    const list = this.#taskList;
+    let changed = false;
+    for (const task of tasks) {
+      const section = stopAt ? null : this.#sections.get(list.effectiveProject(task));
+      if (section?.isCollapsed) section.setCollapsed(false); // updates the DOM in place
+      for (let p = list.parent(task); p; p = list.parent(p)) {
+        if (this.#collapsedKeys.delete(TaskRow.keyOf(p))) changed = true;
+        if (p === stopAt) break;
+      }
+    }
+    if (changed) this.setTaskList(list);
+  }
+
+  #rowsFor(tasks) {
+    const keys = new Set(tasks.map((t) => TaskRow.keyOf(t)));
+    return [...this.#root.querySelectorAll('.task-row')].filter((r) => keys.has(r.dataset.taskKey));
+  }
+
+  #flash(tasks) {
+    const rows = this.#rowsFor(tasks);
     for (const row of rows) row.classList.add('is-flash');
     setTimeout(() => rows.forEach((row) => row.classList.remove('is-flash')), FLASH_MS);
   }
@@ -258,6 +294,7 @@ export class App {
   #renderSections(main) {
     const palette = new ProjectPalette(this.#taskList);
     const today = App.today();
+    this.#sections.clear();
     for (const [project, { roots, tasks }] of this.#groupByProject()) {
       const section = new ProjectSection({
         project,
@@ -272,8 +309,10 @@ export class App {
           complete: (task) => this.#complete(task),
           reopen: (task) => this.#reopen(task),
           highlightOpen: (task) => this.#highlightOpen(task),
+          showTask: (id) => this.#showTask(id),
         },
       });
+      this.#sections.set(project, section);
       main.append(section.element);
     }
   }

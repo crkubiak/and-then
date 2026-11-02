@@ -23,7 +23,7 @@ export class TaskRow {
   static #nextId = 0;
 
   // `collapsedKeys` is the App-owned Set of collapsed task keys (see TaskRow.keyOf).
-  // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task).
+  // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task), showTask(id).
   constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {} }) {
     this.#task = task;
     this.#actions = actions;
@@ -208,7 +208,11 @@ export class TaskRow {
       tail.append(TaskRow.#el('span', 'task-progress', `${done}/${total}`));
     }
     if (this.#taskList.isBlocked(task)) {
-      tail.append(TaskRow.#el('span', 'pill-blocked', `Blocked by #${task.depId}`));
+      const pill = TaskRow.#el('button', 'pill-blocked', `Blocked by #${task.depId}`);
+      pill.type = 'button';
+      pill.setAttribute('aria-label', `Show blocking task #${task.depId}`);
+      pill.addEventListener('click', () => this.#actions.showTask?.(task.depId));
+      tail.append(pill);
     }
     if (task.id !== null) tail.append(TaskRow.#el('span', 'task-id', `#${task.id}`));
   }

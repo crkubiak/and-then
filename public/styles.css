@@ -306,6 +306,16 @@ body {
   line-height: 1.5;
 }
 
+button.pill-blocked {
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.pill-blocked:hover {
+  background: var(--bg-deep);
+}
+
 /* Rows. --toggle is the toggle's hit area; row text sits on a 28px grid. */
 .task-row {
   display: flex;
