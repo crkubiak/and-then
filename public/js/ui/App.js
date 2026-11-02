@@ -14,6 +14,7 @@ import { TaskRow } from './TaskRow.js';
 import { Toast } from './Toast.js';
 
 const FLASH_MS = 1500;
+const MAX_SAVE_ATTEMPTS = 3; // first try plus two re-applications after a 409
 const CHANGED_ON_DISK = 'That task changed on disk. Your edit was not saved.';
 const NEW_ID = 'new'; // placeholder in a + Subtask prefill until the parent's id is allocated
 const NEW_ID_TOKEN = new RegExp(`(^|\\s)parent:${NEW_ID}(?=\\s|$)`);
@@ -30,6 +31,7 @@ export class App {
   #tail = Promise.resolve(); // commits and reloads run one at a time through this chain
   #reloadQueued = false;
   #latestVersion = null;
+  #absorbed = new Set(); // versions already loaded from a 409; their live events need no reload
   // Open inline editor: { task, draft, start, end, focused }. `draft` and the selection are
   // synced from the live TaskEditor (#editorView) just before each re-render.
   #editor = null;
@@ -71,12 +73,17 @@ export class App {
 
   #onVersion(version) {
     this.#latestVersion = version;
-    if (version === this.#store.version || this.#reloadQueued) return;
+    if (this.#isCurrent(version) || this.#reloadQueued) return;
     this.#reloadQueued = true; // a reload that hasn't started yet will see the newest version anyway
     this.#enqueue(() => {
       this.#reloadQueued = false;
-      return this.#latestVersion === this.#store.version ? undefined : this.#reload();
+      return this.#isCurrent(this.#latestVersion) ? undefined : this.#reload();
     });
+  }
+
+  // True when `version` is already what we hold (our own save, or a list a 409 handed us).
+  #isCurrent(version) {
+    return version === this.#store.version || this.#absorbed.has(version);
   }
 
   #enqueue(job) {
@@ -86,6 +93,7 @@ export class App {
   }
 
   async #reload() {
+    this.#absorbed.clear();
     try {
       this.#present(new TaskList(await this.#store.load()));
     } catch (err) {
@@ -109,25 +117,35 @@ export class App {
     this.#deferred = true;
   }
 
+  // Runs the transform on the current list and saves. On a 409 the store hands back the fresh
+  // files and the same transform runs again on them (up to MAX_SAVE_ATTEMPTS tries), so the
+  // target is found again by id or exact text. If it no longer applies, the action is dropped.
   async #runCommit(transform, onSaved) {
+    this.#absorbed.clear();
+    let list = this.#taskList;
     try {
-      const next = transform(this.#taskList);
-      if (typeof next === 'string') {
-        this.toast.error(next);
-        return false;
+      for (let attempt = 1; attempt <= MAX_SAVE_ATTEMPTS; attempt++) {
+        const next = transform(list);
+        if (typeof next === 'string') {
+          this.toast.error(next);
+          if (attempt > 1) this.#present(list); // the page still shows the older content
+          return false;
+        }
+        const result = await this.#store.save(next.toText());
+        if (result.ok) {
+          onSaved?.();
+          this.setTaskList(next);
+          return true;
+        }
+        this.#absorbed.add(this.#store.version);
+        list = new TaskList(result.current);
       }
-      const result = await this.#store.save(next.toText());
-      if (result.ok) {
-        onSaved?.();
-        this.setTaskList(next);
-        return true;
-      }
-      // Conflict. Phase 8.6 re-applies the transform here instead.
-      this.#present(new TaskList(result.current));
-      this.toast.info('The files changed on disk. Your change was not saved. Please retry.');
+      this.toast.error('The files keep changing on disk. Your change was not saved. Try again.');
+      this.#present(list);
       return false;
     } catch (err) {
       this.toast.error(`Could not save: ${err.message}`);
+      if (list !== this.#taskList) this.#present(list); // a 409 already showed us newer content
       return false;
     }
   }
