@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { watch as fsWatch } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -17,6 +18,7 @@ const MIME = {
 
 const MAX_BODY = 5 * 1024 * 1024; // 5 MB cap on PUT bodies
 const FILES = ['todo.txt', 'done.txt']; // the only files the API ever touches
+const DEBOUNCE_MS = 100; // collapse a burst of fs events into one check
 
 // An error that maps straight to an HTTP status.
 class HttpError extends Error {
@@ -32,11 +34,18 @@ class Server {
     this.dataDir = dataDir;
     this.putQueue = Promise.resolve(); // serializes PUTs so the version check and write are atomic
     this.publicDir = path.join(ROOT, 'public');
+    this.lastVersion = null; // hash of the files as last announced or written by this server
+    this.onChange = new Set(); // callbacks invoked with { version } on external changes
+    this.watcher = null;
+    this.debounceTimer = null;
+    this.retried = false;
     this.http = http.createServer((req, res) => this.handle(req, res));
   }
 
   async start() {
     await this.ensureFiles();
+    this.lastVersion = (await this.readFiles()).version;
+    this.watch();
     this.http.listen(this.port, '127.0.0.1', () => {
       console.log(`Listening on http://127.0.0.1:${this.port}`);
     });
@@ -48,6 +57,45 @@ class Server {
     for (const name of FILES) {
       await (await fs.open(path.join(this.dataDir, name), 'a')).close();
     }
+  }
+
+  // Watch the directory, not the files: atomic replaces (write temp, rename) break file watches.
+  watch() {
+    try {
+      this.watcher = fsWatch(this.dataDir, (_event, filename) => {
+        if (filename == null || FILES.includes(String(filename))) this.schedule();
+      });
+      this.watcher.on('error', (err) => console.error('watcher error:', err));
+    } catch (err) {
+      console.error('watcher failed to start:', err);
+    }
+  }
+
+  schedule() {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => this.check(), DEBOUNCE_MS);
+  }
+
+  // Notify only when content differs from what this server last announced or wrote.
+  async check() {
+    let version;
+    try {
+      ({ version } = await this.readFiles());
+      this.retried = false;
+    } catch (err) {
+      // A file may be briefly missing mid-replace: retry once on the next debounce.
+      if (!this.retried) {
+        this.retried = true;
+        this.schedule();
+      } else {
+        this.retried = false;
+        console.error('watch read failed:', err);
+      }
+      return;
+    }
+    if (version === this.lastVersion) return;
+    this.lastVersion = version;
+    for (const fn of this.onChange) fn({ version });
   }
 
   async handle(req, res) {
@@ -74,6 +122,7 @@ class Server {
     const allowedHosts = [`127.0.0.1:${this.port}`, `localhost:${this.port}`];
     if (!allowedHosts.includes(req.headers.host)) throw new HttpError(403, 'Forbidden host');
     if (pathname !== '/api/files') throw new HttpError(404, 'Not Found');
+    // GET leaves lastVersion alone so an external edit is still announced to other tabs.
     if (req.method === 'GET') return this.sendJson(res, 200, await this.readFiles());
     if (req.method === 'PUT') return this.putFiles(req, res);
     res.setHeader('Allow', 'GET, PUT');
@@ -111,7 +160,9 @@ class Server {
     // done.txt first: a failure in between duplicates lines rather than losing them.
     await this.writeAtomic('done.txt', done);
     await this.writeAtomic('todo.txt', todo);
-    return { status: 200, payload: { version: this.hash(todo, done) } };
+    const next = this.hash(todo, done);
+    this.lastVersion = next; // the watcher's check will see this and stay quiet
+    return { status: 200, payload: { version: next } };
   }
 
   async writeAtomic(name, content) {
@@ -207,7 +258,9 @@ function pathnameIsApi(url) {
 }
 
 const [, , dataDirArg] = process.argv;
-new Server({
+const server = new Server({
   port: Number(process.env.PORT) || 3000,
   dataDir: path.resolve(ROOT, dataDirArg ?? 'data'),
-}).start();
+});
+server.onChange.add(({ version }) => console.log('files changed', version)); // 7.2 replaces this
+server.start();
