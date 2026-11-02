@@ -44,6 +44,16 @@ export class Task {
     return this.#tag('due');
   }
 
+  // The body without +project, @context and key:value tags. Empty means the line has no words to show.
+  get description() {
+    return this.body
+      .split(/\s+/)
+      .filter((word) => word !== '')
+      .filter((word) => !(word.length > 1 && (word[0] === '+' || word[0] === '@')))
+      .filter((word) => !(word.includes(':') && Object.hasOwn(this.tags, word.slice(0, word.indexOf(':')))))
+      .join(' ');
+  }
+
   get primaryProject() {
     return this.projects[0] ?? null;
   }

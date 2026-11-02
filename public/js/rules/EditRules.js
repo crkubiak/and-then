@@ -7,6 +7,7 @@ export class EditRules {
   static check(taskList, task, line) {
     if (line.trim() === '') return "Deletion isn't supported yet.";
     const next = TaskParser.parse(line, { file: 'todo', lineNumber: task.lineNumber });
+    if (next.description === '') return 'Enter a task description.';
     if (next.complete !== task.complete) return 'Use the checkbox to complete or reopen.';
     return (
       EditRules.#idError(taskList, task, next) ??

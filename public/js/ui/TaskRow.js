@@ -67,9 +67,12 @@ export class TaskRow {
 
   // A todo.txt description is a button that opens the inline editor.
   #description() {
+    // A line with only tags has no words; show a placeholder so it can still be clicked.
     const text = this.#visibleText();
-    if (this.#task.file !== 'todo') return TaskRow.#el('span', 'task-text', text);
-    const button = TaskRow.#el('button', 'task-text task-text-edit', text);
+    const empty = text === '';
+    const label = empty ? '(no description)' : text;
+    if (this.#task.file !== 'todo') return TaskRow.#el('span', empty ? 'task-text is-empty' : 'task-text', label);
+    const button = TaskRow.#el('button', empty ? 'task-text task-text-edit is-empty' : 'task-text task-text-edit', label);
     button.type = 'button';
     button.title = 'Edit task';
     button.dataset.key = `text:${TaskRow.keyOf(this.#task)}`; // lets App restore focus after a re-render

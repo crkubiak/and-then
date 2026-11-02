@@ -451,6 +451,11 @@ button.task-check:hover {
   cursor: pointer;
 }
 
+.task-text.is-empty {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
 .task-text-edit:hover {
   box-shadow: 0 1px 0 var(--fg-muted); /* underline that keeps a completed task's line-through */
 }

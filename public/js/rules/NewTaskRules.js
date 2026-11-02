@@ -7,7 +7,7 @@ export class NewTaskRules {
     const typed = text.trim();
     if (typed.startsWith('x ')) return { error: 'Add open tasks only.' };
     const task = TaskParser.parse(typed, { file: 'todo', lineNumber: 0 });
-    if (!task || task.body.trim() === '') return { error: 'Enter a task description.' };
+    if (!task || task.description === '') return { error: 'Enter a task description.' };
 
     if (task.id !== null && taskList.byId(task.id)) return { error: `id:${task.id} already exists.` };
     const mismatch = NewTaskRules.parentError(taskList, task);
