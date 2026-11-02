@@ -12,6 +12,7 @@ import { SweepRules } from '../rules/SweepRules.js';
 import { Validator } from '../rules/Validator.js';
 import { VisibilityRules } from '../rules/VisibilityRules.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
+import { RawDrawer } from './RawDrawer.js';
 import { TaskEditor } from './TaskEditor.js';
 import { TaskInput } from './TaskInput.js';
 import { TaskRow } from './TaskRow.js';
@@ -21,6 +22,7 @@ import { Toast } from './Toast.js';
 const FLASH_MS = 1500;
 const MAX_SAVE_ATTEMPTS = 3; // first try plus two re-applications after a 409
 const CHANGED_ON_DISK = 'That task changed on disk. Your edit was not saved.';
+const RAW_CHANGED = 'The files changed on disk while you were editing. Load latest, then re-apply your edit.';
 const NEW_ID = 'new'; // placeholder in a + Subtask prefill until the parent's id is allocated
 const NEW_ID_TOKEN = new RegExp(`(^|\\s)parent:${NEW_ID}(?=\\s|$)`);
 
@@ -39,7 +41,9 @@ export class App {
     onCollapseAll: () => this.#setAllExpanded(false),
     onProblemsToggle: () => this.#toggleProblems(),
     onSweep: () => this.#sweep(),
+    onRaw: () => this.#rawDrawer.open(this.#taskList.toText()),
   });
+  #rawDrawer = new RawDrawer({ onSave: (draft) => this.#saveRaw(draft), onClose: () => this.#toolbar.focusRaw() });
   #problemsPanel = new ProblemsPanel({ onSelect: (task) => this.#revealTask(task) });
   #problems = []; // validator problems plus their todo.txt task, rebuilt each render
   #problemsOpen = false; // session-only; survives re-renders
@@ -130,6 +134,7 @@ export class App {
   #present(list) {
     if (this.#editor === null) return this.setTaskList(list);
     this.#taskList = list;
+    this.#rawDrawer.update(list.toText());
     this.#deferred = true;
   }
 
@@ -372,6 +377,7 @@ export class App {
   // All rendering goes through here (initial load, live reload, actions).
   setTaskList(taskList) {
     this.#taskList = taskList;
+    this.#rawDrawer.update(taskList.toText());
     this.#deferred = false;
     const scrollY = window.scrollY;
     const focusKey = this.#focusedKey();
@@ -433,6 +439,22 @@ export class App {
         return result.taskList;
       },
       { onSaved: () => this.toast.info(`Swept ${swept} ${swept === 1 ? 'task' : 'tasks'} to done.txt.`) },
+    );
+  }
+
+  // Raw drawer save: whole files replace the current ones, so it cannot be re-applied to
+  // newer content. The transform only runs when the list it is given still has exactly the
+  // text the drafts were started from (`base`); on a 409 retry the list is the fresh files,
+  // which no longer match, so it is refused and the drawer keeps its drafts. No validation:
+  // the Problems panel reports whatever the new text contains.
+  #saveRaw({ todo, done, eols, base }) {
+    return this.#commit(
+      (list) => {
+        const current = list.toText();
+        if (current.todo !== base.todo || current.done !== base.done) return RAW_CHANGED;
+        return new TaskList({ todo, done, eols });
+      },
+      { onSaved: () => this.#rawDrawer.close() },
     );
   }
 
@@ -503,7 +525,7 @@ export class App {
 
     const main = document.createElement('main');
     main.className = 'app-main';
-    const bar = summary ? [this.#toolbar.element, this.#problemsPanel.element] : [];
+    const bar = withInput ? [this.#toolbar.element, this.#problemsPanel.element] : [];
     const controls = withInput ? [this.#taskInput.element, ...bar] : [];
     this.#root.replaceChildren(header, ...controls, main);
     return main;

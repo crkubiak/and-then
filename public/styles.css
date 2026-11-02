@@ -335,6 +335,134 @@ button.problem-item:hover {
   outline-offset: -2px; /* the section clips overflow */
 }
 
+/* Raw text drawer. Sits under the toasts (z-index 10) so messages stay visible. */
+.raw-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+}
+
+.raw-drawer[hidden] {
+  display: none;
+}
+
+.raw-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-deep);
+  opacity: 0.7;
+}
+
+.raw-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  background: var(--bg);
+  border-left: 1px solid var(--fg-muted);
+  animation: raw-slide-in 0.2s ease-out;
+}
+
+@keyframes raw-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+
+.raw-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+}
+
+.raw-title {
+  flex: 1;
+  margin: 0;
+  color: var(--green);
+  font-size: 1.125rem;
+}
+
+.raw-button {
+  min-height: var(--toggle);
+  padding: 0 var(--space-3);
+  background: none;
+  border: 1px solid var(--fg-muted);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.raw-button:hover {
+  border-color: var(--green);
+}
+
+.raw-save {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--bg-deep);
+  font-weight: 600;
+}
+
+.raw-button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.raw-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 2px solid var(--yellow);
+  font-size: 0.9375rem;
+}
+
+.raw-notice[hidden] {
+  display: none;
+}
+
+.raw-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  padding: var(--space-4);
+}
+
+.raw-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 0;
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+}
+
+.raw-field {
+  flex: 1;
+  min-height: 6rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-deep);
+  border: 1px solid var(--fg-muted);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+}
+
 /* Toasts */
 .toast-region {
   position: fixed;

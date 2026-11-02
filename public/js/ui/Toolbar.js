@@ -7,10 +7,11 @@ export class Toolbar {
   #problems;
   #sweep;
   #sweepCount;
+  #raw;
   #element;
 
   // `onHideChange()` runs after the toggle changes (read it back with `hideCompleted`).
-  constructor({ onHideChange, onExpandAll, onCollapseAll, onProblemsToggle, onSweep }) {
+  constructor({ onHideChange, onExpandAll, onCollapseAll, onProblemsToggle, onSweep, onRaw }) {
     this.#element = document.createElement('div');
     this.#element.className = 'toolbar';
     this.#element.setAttribute('role', 'toolbar');
@@ -42,6 +43,8 @@ export class Toolbar {
     this.#sweepCount.className = 'badge toolbar-count';
     this.#sweep.append(' ', this.#sweepCount);
     this.#element.append(this.#sweep);
+    this.#raw = Toolbar.#button('Raw text', 'toolbar:raw', onRaw);
+    this.#element.append(this.#raw);
     this.#problems = Toolbar.#button('', 'toolbar:problems', onProblemsToggle);
     this.#problems.setAttribute('aria-controls', 'problems-panel');
     this.#problems.setAttribute('aria-expanded', 'false');
@@ -68,6 +71,11 @@ export class Toolbar {
     this.#sweepCount.hidden = count === 0;
     this.#sweep.setAttribute('aria-disabled', String(count === 0));
     this.#sweep.title = count === 0 ? 'Nothing is old enough to sweep' : '';
+  }
+
+  // The raw drawer returns focus here when it closes.
+  focusRaw() {
+    this.#raw.focus();
   }
 
   get hideCompleted() {
