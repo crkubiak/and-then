@@ -4,6 +4,8 @@ import { TaskList } from '../model/TaskList.js';
 import { CompletionRules } from '../rules/CompletionRules.js';
 import { ProjectPalette } from './ProjectPalette.js';
 import { ProjectSection } from './ProjectSection.js';
+import { NewTaskRules } from '../rules/NewTaskRules.js';
+import { TaskInput } from './TaskInput.js';
 import { TaskRow } from './TaskRow.js';
 import { Toast } from './Toast.js';
 
@@ -17,6 +19,7 @@ export class App {
   #status = 'reconnecting';
   #dot = null;
   #toast = null;
+  #taskInput = new TaskInput({ onSubmit: (text, pending) => this.#addTask(text, pending) });
   #tail = Promise.resolve(); // commits and reloads run one at a time through this chain
   #reloadQueued = false;
   #latestVersion = null;
@@ -120,6 +123,14 @@ export class App {
     });
   }
 
+  // `pending` is the 8.4 hook (assign the parent an id in the same commit); unused until then.
+  #addTask(text, pending = null) {
+    return this.#commit((list) => {
+      const { line, error } = NewTaskRules.prepare(list, text, App.today());
+      return error ?? list.appendLine('todo', line);
+    });
+  }
+
   #reopen(task) {
     return this.#commit((list) => {
       const target = list.locate(task);
@@ -208,9 +219,11 @@ export class App {
     this.#taskList = taskList;
     const scrollY = window.scrollY;
     const focusKey = this.#focusedKey();
+    const inputState = this.#taskInput.snapshot(); // the input is detached and re-attached by #render
     this.#render();
     window.scrollTo(0, scrollY);
     this.#restoreFocus(focusKey);
+    this.#taskInput.restore(inputState);
   }
 
   // Only section headers and row toggles carry a data-key.
@@ -232,7 +245,7 @@ export class App {
     else this.#renderSections(main);
   }
 
-  #renderShell(summary = null) {
+  #renderShell(summary = null, { withInput = true } = {}) {
     const header = document.createElement('header');
     header.className = 'app-header';
     const titleRow = this.#el('div', 'title-row');
@@ -252,7 +265,7 @@ export class App {
 
     const main = document.createElement('main');
     main.className = 'app-main';
-    this.#root.replaceChildren(header, main);
+    this.#root.replaceChildren(header, ...(withInput ? [this.#taskInput.element] : []), main);
     return main;
   }
 
@@ -333,7 +346,7 @@ export class App {
   }
 
   #renderError(err) {
-    const main = this.#renderShell();
+    const main = this.#renderShell(null, { withInput: false });
     main.append(this.#errorBadge(err));
   }
 

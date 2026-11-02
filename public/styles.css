@@ -120,6 +120,40 @@ body {
 .accent-strip span:nth-child(3) { background: var(--teal); }
 .accent-strip span:nth-child(4) { background: var(--red); }
 
+.task-input {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.task-input-field {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--fg-muted);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font: inherit;
+  font-size: 1rem; /* 16px keeps iOS from zooming on focus */
+}
+
+.task-input-field::placeholder {
+  color: var(--fg-muted);
+}
+
+.task-input-add {
+  flex: none;
+  padding: var(--space-2) var(--space-4);
+  background: var(--green);
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--bg-deep);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .app-main {
   display: flex;
   flex-direction: column;
