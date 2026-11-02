@@ -59,12 +59,16 @@ export class App {
 
   #renderSections(main) {
     const palette = new ProjectPalette(this.#taskList);
-    for (const [project, tasks] of this.#groupByProject()) {
+    const today = App.today();
+    for (const [project, { roots, tasks }] of this.#groupByProject()) {
       const section = new ProjectSection({
         project,
         accent: palette.accent(project),
+        roots,
         tasks,
         taskList: this.#taskList,
+        palette,
+        today,
       });
       main.append(section.element);
     }
@@ -73,13 +77,15 @@ export class App {
   // Inbox (null) first, then projects in order of first appearance.
   // A section holds its roots and all their descendants.
   #groupByProject() {
-    const groups = new Map([[null, []]]);
+    const groups = new Map([[null, { roots: [], tasks: [] }]]);
     for (const root of this.#taskList.roots()) {
       const project = this.#taskList.effectiveProject(root);
-      if (!groups.has(project)) groups.set(project, []);
-      groups.get(project).push(root, ...this.#taskList.descendants(root));
+      if (!groups.has(project)) groups.set(project, { roots: [], tasks: [] });
+      const group = groups.get(project);
+      group.roots.push(root);
+      group.tasks.push(root, ...this.#taskList.descendants(root));
     }
-    if (groups.get(null).length === 0) groups.delete(null);
+    if (groups.get(null).tasks.length === 0) groups.delete(null);
     return groups;
   }
 

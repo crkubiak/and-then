@@ -1,4 +1,5 @@
 import { ProjectPalette } from './ProjectPalette.js';
+import { TaskRow } from './TaskRow.js';
 
 const STORAGE_KEY = 'taskflow.collapsed';
 
@@ -9,8 +10,9 @@ export class ProjectSection {
   #section;
   static #nextId = 0;
 
-  // `project` is null for Inbox. `tasks` is the section's roots and all descendants.
-  constructor({ project, accent, tasks, taskList }) {
+  // `project` is null for Inbox. `tasks` is the section's roots and all descendants;
+  // `roots` are the top-level tasks the tree renders from.
+  constructor({ project, accent, roots, tasks, taskList, palette, today }) {
     this.#key = project ?? '';
     this.#section = document.createElement('section');
     this.#section.className = 'project-section';
@@ -18,7 +20,7 @@ export class ProjectSection {
 
     const bodyId = `project-body-${ProjectSection.#nextId++}`;
     this.#button = this.#buildHeader(project, tasks, bodyId);
-    this.#body = this.#buildBody(tasks, taskList, bodyId);
+    this.#body = this.#buildBody(roots, taskList, palette, today, bodyId);
     this.#section.append(this.#button, this.#body);
 
     this.#button.addEventListener('click', () => this.setCollapsed(!this.isCollapsed));
@@ -63,16 +65,9 @@ export class ProjectSection {
 
     button.append(chevron, title, counts);
     const priority = ProjectSection.#highestOpenPriority(tasks);
-    if (priority) button.append(this.#priorityBadge(priority));
+    if (priority) button.append(TaskRow.priorityBadge(priority));
     button.append(this.#progressBar(done, total));
     return button;
-  }
-
-  #priorityBadge(letter) {
-    const group = /^[ABC]$/.test(letter) ? letter.toLowerCase() : 'other';
-    const badge = this.#el('span', `badge badge-priority badge-priority-${group}`, `(${letter})`);
-    badge.title = 'Highest open priority';
-    return badge;
   }
 
   #progressBar(done, total) {
@@ -88,14 +83,11 @@ export class ProjectSection {
     return bar;
   }
 
-  // TEMPORARY: replaced in 6.4 by TaskRow.
-  #buildBody(tasks, taskList, bodyId) {
+  #buildBody(roots, taskList, palette, today, bodyId) {
     const body = this.#el('div', 'project-body');
     body.id = bodyId;
-    for (const task of tasks) {
-      const line = this.#el('div', 'temp-task-line', task.body);
-      line.style.paddingLeft = `calc(var(--space-6) * ${taskList.ancestors(task).length})`;
-      body.append(line);
+    for (const task of roots) {
+      body.append(new TaskRow({ task, taskList, palette, today }).element);
     }
     return body;
   }

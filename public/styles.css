@@ -161,9 +161,105 @@ body {
   padding: var(--space-2) var(--space-4) var(--space-3);
 }
 
-.temp-task-line {
-  padding-top: var(--space-1);
-  padding-bottom: var(--space-1);
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-1) 0;
+  border-radius: var(--radius);
+}
+
+.task-row:hover {
+  background: var(--surface);
+}
+
+.task-toggle,
+.task-spacer {
+  flex: none;
+  width: 20px;
+  height: 24px;
+}
+
+.task-toggle {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--fg-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.task-toggle .chevron {
+  transform: rotate(90deg);
+}
+
+.is-collapsed > .task-row .task-toggle .chevron {
+  transform: none;
+}
+
+.task-check {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  border: 2px solid var(--fg-muted);
+  border-radius: var(--radius-badge);
+  color: var(--green);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+.task-check.is-done {
+  border-color: var(--green);
+}
+
+.task-main {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.is-complete .task-text {
+  color: var(--fg-muted);
+  text-decoration: line-through;
+}
+
+.task-tail {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+  font-size: 0.8125rem;
+}
+
+.task-progress,
+.task-id {
+  color: var(--fg-muted);
+}
+
+/* One rail per nesting level; a grandchild sits inside two. */
+.task-children {
+  margin-left: 9px;
+  padding-left: 9px;
+  border-left: 2px solid var(--teal);
+}
+
+.badge-context { background: var(--teal); color: var(--fg); }
+.badge-project { background: var(--accent); color: var(--bg-deep); }
+.badge-project[data-accent="red"],
+.badge-project[data-accent="teal"] { color: var(--fg); }
+.badge-due-overdue { background: var(--red); color: var(--fg); }
+.badge-due-soon { background: var(--yellow); color: var(--bg-deep); }
+.badge-due-later { padding: 0; color: var(--green); }
+
+.pill-blocked {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--yellow);
+  border-radius: 999px;
+  color: var(--yellow);
+  font-size: 0.75rem;
 }
 
 .error-badge {
