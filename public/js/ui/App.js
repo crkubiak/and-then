@@ -1,10 +1,13 @@
 import { FileStore } from '../io/FileStore.js';
 import { LiveSync } from '../io/LiveSync.js';
 import { TaskList } from '../model/TaskList.js';
+import { CompletionRules } from '../rules/CompletionRules.js';
 import { ProjectPalette } from './ProjectPalette.js';
 import { ProjectSection } from './ProjectSection.js';
 import { TaskRow } from './TaskRow.js';
 import { Toast } from './Toast.js';
+
+const FLASH_MS = 1500;
 
 export class App {
   #root;
@@ -13,9 +16,10 @@ export class App {
   #collapsedKeys = new Set(); // collapsed task rows, session-only (see TaskRow.keyOf)
   #status = 'reconnecting';
   #dot = null;
-  #reloading = false;
-  #reloadAgain = false;
   #toast = null;
+  #tail = Promise.resolve(); // commits and reloads run one at a time through this chain
+  #reloadQueued = false;
+  #latestVersion = null;
 
   constructor(root, { store = new FileStore() } = {}) {
     this.#root = root;
@@ -50,29 +54,97 @@ export class App {
   }
 
   #onVersion(version) {
-    if (version === this.#store.version) return;
-    if (this.#reloading) {
-      this.#reloadAgain = true; // run exactly one more reload when this one finishes
-      return;
-    }
-    this.#reload();
+    this.#latestVersion = version;
+    if (version === this.#store.version || this.#reloadQueued) return;
+    this.#reloadQueued = true; // a reload that hasn't started yet will see the newest version anyway
+    this.#enqueue(() => {
+      this.#reloadQueued = false;
+      return this.#latestVersion === this.#store.version ? undefined : this.#reload();
+    });
+  }
+
+  #enqueue(job) {
+    const run = this.#tail.then(job);
+    this.#tail = run.catch(() => {});
+    return run;
   }
 
   async #reload() {
-    this.#reloading = true;
     try {
-      do {
-        this.#reloadAgain = false;
-        try {
-          // Phase 8: skip or defer this re-render while an inline editor is open.
-          this.setTaskList(new TaskList(await this.#store.load()));
-        } catch (err) {
-          this.#showReloadError(err); // keep the current view
-        }
-      } while (this.#reloadAgain);
-    } finally {
-      this.#reloading = false;
+      // Phase 8.5: defer this re-render while an inline editor is open.
+      this.setTaskList(new TaskList(await this.#store.load()));
+    } catch (err) {
+      this.#showReloadError(err); // keep the current view
     }
+  }
+
+  // The one write path. `transform(taskList)` returns the new TaskList, or a string
+  // (the reason it can't apply). It must find its target with taskList.locate(), never
+  // hold a Task from an earlier list, so it can be re-run on fresh content after a 409.
+  #commit(transform) {
+    return this.#enqueue(() => this.#runCommit(transform));
+  }
+
+  async #runCommit(transform) {
+    try {
+      const next = transform(this.#taskList);
+      if (typeof next === 'string') {
+        this.toast.error(next);
+        return false;
+      }
+      const result = await this.#store.save(next.toText());
+      if (result.ok) {
+        this.setTaskList(next);
+        return true;
+      }
+      // Conflict. Phase 8.6 re-applies the transform here instead.
+      this.setTaskList(new TaskList(result.current));
+      this.toast.info('The files changed on disk. Your change was not saved. Please retry.');
+      return false;
+    } catch (err) {
+      this.toast.error(`Could not save: ${err.message}`);
+      return false;
+    }
+  }
+
+  #complete(task) {
+    const check = CompletionRules.check(this.#taskList, task);
+    if (check.needsConfirm && !window.confirm(`#${task.depId} is not complete. Complete anyway?`)) return;
+    return this.#commit((list) => {
+      const target = list.locate(task);
+      if (!target) return 'That task no longer exists.';
+      if (target.complete) return 'That task is already complete.';
+      if (!CompletionRules.check(list, target).allowed) return 'That task has open subtasks.';
+      return CompletionRules.complete(list, target, App.today());
+    });
+  }
+
+  #reopen(task) {
+    return this.#commit((list) => {
+      const target = list.locate(task);
+      if (!target) return 'That task no longer exists.';
+      return CompletionRules.reopen(list, target);
+    });
+  }
+
+  // Locked checkbox: expand collapsed branches down to the open descendants, then flash them.
+  #highlightOpen(task) {
+    const list = this.#taskList;
+    const target = list.locate(task);
+    if (!target) return;
+    const open = CompletionRules.check(list, target).openDescendants;
+    let expanded = false;
+    for (const d of open) {
+      for (let p = list.parent(d); p; p = list.parent(p)) {
+        if (this.#collapsedKeys.delete(TaskRow.keyOf(p))) expanded = true;
+        if (p === target) break;
+      }
+    }
+    if (expanded) this.setTaskList(list);
+    const keys = new Set(open.map((t) => TaskRow.keyOf(t)));
+    const rows = [...this.#root.querySelectorAll('.task-row')].filter((r) => keys.has(r.dataset.taskKey));
+    for (const row of rows) row.classList.add('is-flash');
+    setTimeout(() => rows.forEach((row) => row.classList.remove('is-flash')), FLASH_MS);
   }
 
   #showReloadError(err) {
@@ -196,6 +268,11 @@ export class App {
         palette,
         today,
         collapsedKeys: this.#collapsedKeys,
+        actions: {
+          complete: (task) => this.#complete(task),
+          reopen: (task) => this.#reopen(task),
+          highlightOpen: (task) => this.#highlightOpen(task),
+        },
       });
       main.append(section.element);
     }

@@ -1,4 +1,5 @@
 import { ProjectPalette } from './ProjectPalette.js';
+import { CompletionRules } from '../rules/CompletionRules.js';
 import { SortOrder } from '../rules/SortOrder.js';
 import { VisibilityRules } from '../rules/VisibilityRules.js';
 
@@ -15,14 +16,17 @@ export class TaskRow {
   #palette;
   #today;
   #collapsedKeys;
+  #actions;
   #node;
   #children = null;
   #toggle = null;
   static #nextId = 0;
 
   // `collapsedKeys` is the App-owned Set of collapsed task keys (see TaskRow.keyOf).
-  constructor({ task, taskList, palette, today, collapsedKeys = new Set() }) {
+  // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task).
+  constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {} }) {
     this.#task = task;
+    this.#actions = actions;
     this.#collapsedKeys = collapsedKeys;
     this.#taskList = taskList;
     this.#palette = palette;
@@ -39,6 +43,7 @@ export class TaskRow {
   #buildRow() {
     const task = this.#task;
     const row = TaskRow.#el('div', task.complete ? 'task-row is-complete' : 'task-row');
+    row.dataset.taskKey = TaskRow.keyOf(task);
     row.append(this.#toggleOrSpacer(), this.#indicator());
     if (task.priority) row.append(TaskRow.priorityBadge(task.priority));
 
@@ -92,19 +97,64 @@ export class TaskRow {
     this.#children.style.setProperty('--rail', `var(--${rail})`);
     this.#toggle.setAttribute('aria-controls', this.#children.id);
     for (const kid of SortOrder.sort(kids)) {
-      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys });
+      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions });
       this.#children.append(row.element);
     }
     this.#node.append(this.#children);
     if (this.#collapsedKeys.has(TaskRow.keyOf(this.#task))) this.#setExpanded(false);
   }
 
+  // todo.txt tasks get a real checkbox button; done.txt tasks stay a static mark.
   #indicator() {
-    const done = this.#task.complete;
-    const box = TaskRow.#el('span', done ? 'task-check is-done' : 'task-check', done ? '✓' : '');
-    box.setAttribute('role', 'img');
-    box.setAttribute('aria-label', done ? 'Completed' : 'Open');
-    return box;
+    const task = this.#task;
+    const done = task.complete;
+    if (task.file !== 'todo') {
+      const box = TaskRow.#el('span', 'task-check is-done', '✓');
+      box.setAttribute('role', 'img');
+      box.setAttribute('aria-label', 'Archived');
+      return box;
+    }
+    const button = TaskRow.#el('button', done ? 'task-check is-done' : 'task-check');
+    button.type = 'button';
+    button.dataset.key = `check:${TaskRow.keyOf(task)}`; // lets App restore focus after a re-render
+    const text = this.#visibleText();
+    if (done) {
+      button.textContent = '✓';
+      button.setAttribute('aria-label', `Reopen: ${text}`);
+      button.addEventListener('click', () => this.#actions.reopen?.(task));
+      return button;
+    }
+    const { allowed, openDescendants } = CompletionRules.check(this.#taskList, task);
+    if (allowed) {
+      button.setAttribute('aria-label', `Complete: ${text}`);
+      button.addEventListener('click', () => this.#actions.complete?.(task));
+      return button;
+    }
+    // Locked: aria-disabled (not disabled) so the click can still highlight the open subtasks.
+    const n = openDescendants.length;
+    const reason = `Complete ${n} remaining ${n === 1 ? 'subtask' : 'subtasks'} first`;
+    button.classList.add('is-locked');
+    button.setAttribute('aria-disabled', 'true');
+    button.setAttribute('aria-label', `${reason}: ${text}`);
+    button.title = reason;
+    button.append(TaskRow.#lockIcon());
+    button.addEventListener('click', () => this.#actions.highlightOpen?.(task));
+    return button;
+  }
+
+  static #lockIcon() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 12 12');
+    svg.setAttribute('width', '10');
+    svg.setAttribute('height', '10');
+    svg.setAttribute('aria-hidden', 'true');
+    const body = document.createElementNS(ns, 'rect');
+    for (const [k, v] of Object.entries({ x: 2, y: 5.5, width: 8, height: 5.5, rx: 1, fill: 'currentColor' })) body.setAttribute(k, v);
+    const shackle = document.createElementNS(ns, 'path');
+    for (const [k, v] of Object.entries({ d: 'M3.75 5.5V4a2.25 2.25 0 0 1 4.5 0v1.5', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5 })) shackle.setAttribute(k, v);
+    svg.append(body, shackle);
+    return svg;
   }
 
   // Strips tokens that are shown as badges or hidden; other words stay as written.

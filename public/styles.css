@@ -341,7 +341,10 @@ body {
   flex: none;
   width: 18px;
   height: 18px;
-  margin-top: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  background: none;
+  font-family: inherit;
   border: 2px solid var(--fg-muted);
   border-radius: var(--radius-badge);
   color: var(--green);
@@ -353,6 +356,31 @@ body {
 
 .task-check.is-done {
   border-color: var(--green);
+}
+
+button.task-check {
+  cursor: pointer;
+}
+
+button.task-check:hover {
+  border-color: var(--green);
+}
+
+.task-check.is-locked {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-muted);
+}
+
+.task-check.is-locked:hover {
+  border-color: var(--yellow);
+}
+
+/* Flash on the open subtasks when a locked checkbox is clicked. */
+.task-row.is-flash {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--yellow);
 }
 
 .task-row > .badge-priority {
