@@ -33,6 +33,7 @@ x 2026-11-02 2026-10-30 (A) Call supplier +Infrastructure @phone id:10
 | `id:ID` | Unique ID, numeric (`id:12`) or semantic (`id:db-init`). |
 | `parent:ID` | Nests the task under that task. |
 | `dep:ID` | Blocked until that task is complete. |
+| `wip:Model_version` | In progress. Add it (e.g. `wip:Opus_5.5`) when you start on a task. Remove it when you stop or finish it. |
 | `by:Model_version` | Author. Every line you create must include it, e.g. `by:Opus_5.5` (no spaces). The app uses `by:me` for the user. Never change an existing `by:`. |
 
 Other `key:value` words (letters, digits, `_`, `-` in the key) are kept as tags and ignored. A value starting with `/` is not a tag, so URLs are safe. `#`, `^`, `~` and `!` have no meaning. `#482` is plain text. A bare `+` or `@` is plain text, and so is `a+b@c`.
@@ -93,6 +94,7 @@ Order matters. First append the lines to `done.txt`, unchanged and in their orig
 | `loose-date` | warning | A leading date like `2026-1-5` is not read as a date. Rewrite it as `YYYY-MM-DD`. |
 | `missing-completion-date` | warning | Add the completion date after `x`. |
 | `missing-creation-date` | error | Add a creation date after the priority (today's date if unknown). Open tasks in `todo.txt` only. Completed lines and `done.txt` are exempt. |
+| `wip-on-complete` | warning | Remove `wip:` from the completed line. Applies to both files. |
 | `no-description` | warning | The line is only tags, projects and contexts. Add the task text, or delete the line. Applies to open and completed lines in both files. |
 | `parent-missing` | error | Point at an existing ID or remove `parent:`. |
 | `parent-archived` | error | The parent is in `done.txt`. Remove `parent:` or reopen the parent. |

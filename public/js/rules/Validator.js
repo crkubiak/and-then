@@ -29,6 +29,9 @@ export class Validator {
     if (task.file === 'todo' && !task.complete && task.creationDate === null) {
       add(task, 'error', 'missing-creation-date', 'open task has no creation date');
     }
+    if (task.complete && task.wip !== null) {
+      add(task, 'warning', 'wip-on-complete', 'completed task still has wip:');
+    }
     if (task.complete && !task.completionDate) {
       add(task, 'warning', 'missing-completion-date', 'completed task has no completion date');
     }

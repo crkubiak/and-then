@@ -604,6 +604,21 @@ button.problem-item:hover {
   line-height: 1.5;
 }
 
+/* Agent at work: yellow outline and text, a slow pulse (stopped by prefers-reduced-motion below). */
+.pill-wip {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--yellow);
+  border-radius: 999px;
+  color: var(--yellow);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  animation: wip-pulse 2s ease-in-out infinite;
+}
+
+@keyframes wip-pulse {
+  50% { opacity: 0.55; }
+}
+
 button.pill-blocked {
   background: none;
   font-family: inherit;

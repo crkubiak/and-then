@@ -45,6 +45,10 @@ export class Task {
     return this.#tag('by');
   }
 
+  get wip() {
+    return this.#tag('wip');
+  }
+
   get due() {
     return this.#tag('due');
   }

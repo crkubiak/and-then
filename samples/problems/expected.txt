@@ -16,4 +16,5 @@ todo.txt:18  error    subtask project +Alpha differs from root project +Beta
 todo.txt:19  warning  completed parent has 1 open subtask
 todo.txt:21  warning  line has no description
 todo.txt:22  error    open task has no creation date
-14 errors, 4 warnings
+todo.txt:23  warning  completed task still has wip:
+14 errors, 5 warnings

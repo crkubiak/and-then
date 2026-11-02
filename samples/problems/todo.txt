@@ -20,3 +20,4 @@ x 2026-11-01 2026-10-30 Finished parent +Alpha id:19
 2026-10-30 Still open child parent:19
 2026-10-30 owner:ann +Alpha @home
 Open line without a creation date
+x 2026-11-01 2026-10-30 Finished with stale marker wip:Opus_5.5

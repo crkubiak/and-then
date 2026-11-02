@@ -81,6 +81,7 @@ x 2026-10-30 2026-10-25 (A) Call supplier about server racks +Infrastructure @ph
 | Task ID | `id:ID` | Unique identifier, numeric (`id:12`) or semantic (`id:db-init`). |
 | Parent | `parent:ID` | Nests the task under the task with that ID. Multiple levels are supported. |
 | Dependency | `dep:ID` | The task is blocked until the task with that ID is complete. |
+| In progress | `wip:Model_version` | An agent adds it when it starts on a task and removes it when it stops or finishes. Rows hide it and show a pulsing yellow "Opus 5.5 working" pill on open tasks. Completing from the app strips it. Inline edit may add, change or remove it. |
 | Author | `by:me` or `by:Model_version` | Who created the task: `me` for the user, `Opus_5.5` style for an agent. No spaces, underscores display as spaces. Rows hide it and show a badge (muted "me", teal for agents). Lines without it show no badge, and a missing `by:` is not a validation problem. The add input and + Subtask stamp `by:me` unless the typed line has one. Inline edit can add `by:` but never change or remove one. |
 
 ### 3.1 Hierarchy vs. dependency
@@ -293,7 +294,7 @@ todo.txt:31  warning  completed parent has 2 open subtasks
 - It uses the same validator class as the UI Problems panel.
 - `docs/FORMAT.md` instructs the agent to run it after every edit.
 
-**Checks:** duplicate keys, duplicate IDs, a second `parent:`, unresolved `parent:` / `dep:`, cycles, subtask project mismatch, completed parent with open descendants, malformed dates, an open task with no creation date, a line with no description (any line in either file).
+**Checks:** duplicate keys, duplicate IDs, a second `parent:`, unresolved `parent:` / `dep:`, cycles, subtask project mismatch, completed parent with open descendants, malformed dates, an open task with no creation date, a completed task still carrying `wip:` (warning, either file), a line with no description (any line in either file).
 
 ---
 

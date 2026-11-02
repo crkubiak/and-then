@@ -3,7 +3,8 @@
 export class TaskSerializer {
   static complete(task, date) {
     if (task.complete) return TaskSerializer.#line(task);
-    return TaskSerializer.#join(['x', date, task.creationDate, TaskSerializer.#priority(task)], task.body);
+    const body = TaskSerializer.#dropTag(task.body, 'wip'); // an agent's in-progress mark ends with the task
+    return TaskSerializer.#join(['x', date, task.creationDate, TaskSerializer.#priority(task)], body);
   }
 
   static reopen(task) {
@@ -16,6 +17,14 @@ export class TaskSerializer {
     if (Object.hasOwn(task.tags, key)) return line;
     const gap = /\s$/.test(line) ? '' : ' ';
     return `${line}${gap}${key}:${value}`;
+  }
+
+  // Removes every `key:value` token and one adjacent run of spaces; other spacing is untouched.
+  static #dropTag(text, key) {
+    const token = `${key.replace(/[^\w-]/g, '')}:\\S+`;
+    return text
+      .replace(new RegExp(`^${token}(?=\\s|$)\\s*`), '')
+      .replace(new RegExp(`\\s+${token}(?=\\s|$)`, 'g'), '');
   }
 
   static #line(task) {
