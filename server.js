@@ -306,7 +306,7 @@ function pathnameIsApi(url) {
 const [, , dataDirArg] = process.argv;
 const server = new Server({
   port: Number(process.env.PORT) || 3000,
-  dataDir: path.resolve(ROOT, dataDirArg ?? 'data'),
+  dataDir: dataDirArg ? path.resolve(dataDirArg) : path.join(ROOT, 'data'), // explicit folder is relative to the cwd
 });
 server.onChange.add(({ version }) => {
   server.broadcast(`event: changed\ndata: ${JSON.stringify({ version })}\n\n`);

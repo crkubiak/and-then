@@ -19,22 +19,25 @@ class ValidateCommand {
       console.error(`validate: data directory not found: ${this.dataDir}`);
       return 2;
     }
-    const taskList = new TaskList({
-      todo: await this.read('todo.txt'),
-      done: await this.read('done.txt'),
-    });
+    const [todo, done] = [await this.read('todo.txt'), await this.read('done.txt')];
+    // Neither file present almost always means the wrong folder, not an empty list.
+    if (todo === null && done === null) {
+      console.error(`validate: no todo.txt or done.txt in ${this.dataDir}`);
+      return 2;
+    }
+    const taskList = new TaskList({ todo: todo ?? '', done: done ?? '' });
     const problems = Validator.validate(taskList);
     for (const line of this.format(problems)) console.log(line);
     console.log(this.summary(problems));
     return problems.some((p) => p.severity === 'error') ? 1 : 0;
   }
 
-  // A missing file counts as empty.
+  // A missing file is null; one missing file counts as empty.
   async read(name) {
     try {
       return await fs.readFile(path.join(this.dataDir, name), 'utf8');
     } catch (err) {
-      if (err.code === 'ENOENT') return '';
+      if (err.code === 'ENOENT') return null;
       throw err;
     }
   }
@@ -54,4 +57,6 @@ class ValidateCommand {
 }
 
 const [, , dataDirArg] = process.argv;
-process.exitCode = await new ValidateCommand(path.resolve(ROOT, dataDirArg ?? 'data')).run();
+// An explicit folder is relative to where the command runs; the default is the repo's data/.
+const dataDir = dataDirArg ? path.resolve(dataDirArg) : path.join(ROOT, 'data');
+process.exitCode = await new ValidateCommand(dataDir).run();
