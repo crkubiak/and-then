@@ -18,6 +18,12 @@ export class ProjectPalette {
     return this.#accents.get(project) ?? 'muted';
   }
 
+  // Steps `offset` places through the rotation from `accent`; 'muted' starts at green.
+  static rotate(accent, offset) {
+    const start = Math.max(0, ROTATION.indexOf(accent));
+    return ROTATION[(start + offset) % ROTATION.length];
+  }
+
   static displayName(project) {
     return project === null ? 'Inbox' : project.replaceAll('_', ' ');
   }

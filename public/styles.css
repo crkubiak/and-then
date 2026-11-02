@@ -310,7 +310,7 @@ body {
 .task-children {
   margin-left: calc(var(--toggle) / 2 - 1px);
   padding-left: calc(var(--toggle) / 2 - 3px);
-  border-left: 2px solid var(--teal);
+  border-left: 2px solid var(--rail, var(--teal));
 }
 
 @media (max-width: 600px) {

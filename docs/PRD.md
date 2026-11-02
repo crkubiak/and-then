@@ -218,7 +218,7 @@ Minimal layout, generous color. Dark theme only, built on the gruvbox-baby dark 
 | Blocked-by pill | yellow outline |
 | Validation error / warning badge | red / yellow |
 | Completed task | `--fg-muted` text with strikethrough and a green check |
-| Tree guide lines | teal |
+| Tree guide lines | by depth: the first nest level uses the project accent, then each deeper level steps through the rotation green, yellow, teal, red (Inbox starts at green) |
 | Focus ring | yellow |
 
 **Layout:** full-width and left-aligned with 32px page padding (16px at phone width), system font stack, no shadows or gradients. Spacing and color carry the structure instead of borders. The layout works at phone width with no horizontal scroll.

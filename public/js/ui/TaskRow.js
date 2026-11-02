@@ -75,6 +75,10 @@ export class TaskRow {
     if (kids.length === 0) return;
     this.#children = TaskRow.#el('div', 'task-children');
     this.#children.id = `task-children-${TaskRow.#nextId++}`;
+    // First nest level takes the project accent; each deeper level steps through the rotation.
+    const accent = this.#palette.accent(this.#taskList.effectiveProject(this.#task));
+    const rail = ProjectPalette.rotate(accent, this.#taskList.ancestors(this.#task).length);
+    this.#children.style.setProperty('--rail', `var(--${rail})`);
     this.#toggle.setAttribute('aria-controls', this.#children.id);
     for (const kid of SortOrder.sort(kids)) {
       const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today });
