@@ -171,7 +171,7 @@ Within each section, and within each sibling group, tasks sort by:
 
 - Checkbox (subject to §4), priority badge, description, and badges for context, secondary projects, due date or overdue status, Blocked-by, and validation problems.
 - Subtasks render indented under their parent with a tree guide line. The parent row has a collapse toggle.
-- **+ Subtask:** gives the parent an `id:` if it lacks one, then pre-fills the add input with `+RootProject parent:ID`.
+- **+ Subtask:** pre-fills the add input with `+RootProject parent:ID`. Nothing is written on click. If the parent lacks an `id:`, the prefill shows `parent:new`, and on submit the parent gets a fresh id in the same save as the new subtask.
 - **Inline edit:** clicking the description opens the full raw line for editing. Enter saves and Escape cancels. The only edits rejected are the project-mismatch cases in §3.2.
 
 ### 5.4 Add task input

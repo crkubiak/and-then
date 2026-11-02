@@ -23,7 +23,7 @@ export class TaskRow {
   static #nextId = 0;
 
   // `collapsedKeys` is the App-owned Set of collapsed task keys (see TaskRow.keyOf).
-  // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task), showTask(id).
+  // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task), showTask(id), addSubtask(task).
   constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {} }) {
     this.#task = task;
     this.#actions = actions;
@@ -203,6 +203,13 @@ export class TaskRow {
 
   #appendTail(tail) {
     const task = this.#task;
+    if (task.file === 'todo' && !task.complete) {
+      const add = TaskRow.#el('button', 'task-add-sub', '+ Subtask');
+      add.type = 'button';
+      add.setAttribute('aria-label', `Add subtask to: ${this.#visibleText()}`);
+      add.addEventListener('click', () => this.#actions.addSubtask?.(task));
+      tail.append(add);
+    }
     if (this.#taskList.children(task).length > 0) {
       const { done, total } = VisibilityRules.subtaskProgress(this.#taskList, task);
       tail.append(TaskRow.#el('span', 'task-progress', `${done}/${total}`));

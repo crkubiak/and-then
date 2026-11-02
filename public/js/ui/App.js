@@ -1,6 +1,8 @@
 import { FileStore } from '../io/FileStore.js';
 import { LiveSync } from '../io/LiveSync.js';
 import { TaskList } from '../model/TaskList.js';
+import { IdAllocator } from '../model/IdAllocator.js';
+import { TaskSerializer } from '../model/TaskSerializer.js';
 import { CompletionRules } from '../rules/CompletionRules.js';
 import { ProjectPalette } from './ProjectPalette.js';
 import { ProjectSection } from './ProjectSection.js';
@@ -10,6 +12,8 @@ import { TaskRow } from './TaskRow.js';
 import { Toast } from './Toast.js';
 
 const FLASH_MS = 1500;
+const NEW_ID = 'new'; // placeholder in a + Subtask prefill until the parent's id is allocated
+const NEW_ID_TOKEN = new RegExp(`(^|\\s)parent:${NEW_ID}(?=\\s|$)`);
 
 export class App {
   #root;
@@ -123,12 +127,31 @@ export class App {
     });
   }
 
-  // `pending` is the 8.4 hook (assign the parent an id in the same commit); unused until then.
+  // `pending` ({ parent }) is set by + Subtask when the parent had no id. If the typed text still
+  // has the placeholder, the id is allocated and written to the parent in this same commit.
   #addTask(text, pending = null) {
     return this.#commit((list) => {
-      const { line, error } = NewTaskRules.prepare(list, text, App.today());
-      return error ?? list.appendLine('todo', line);
+      let base = list;
+      let typed = text;
+      if (pending && NEW_ID_TOKEN.test(text)) {
+        const parent = list.locate(pending.parent);
+        if (!parent) return 'The parent task no longer exists.';
+        const id = parent.id ?? IdAllocator.next(list);
+        typed = text.replace(NEW_ID_TOKEN, `$1parent:${id}`);
+        if (parent.id === null) base = list.replaceLine(parent, TaskSerializer.setTag(parent, 'id', id));
+      }
+      const { line, error } = NewTaskRules.prepare(base, typed, App.today());
+      return error ?? base.appendLine('todo', line); // on error nothing is returned, so no id is written
     });
+  }
+
+  // + Subtask: pre-fill the input. Nothing is written until the subtask is submitted.
+  #addSubtask(task) {
+    const parent = this.#taskList.locate(task);
+    if (!parent) return;
+    const project = this.#taskList.effectiveProject(parent);
+    const text = ` ${project ? `+${project} ` : ''}parent:${parent.id ?? NEW_ID}`;
+    this.#taskInput.prefill(text, { caretAt: 'start', pending: parent.id === null ? { parent } : null });
   }
 
   #reopen(task) {
@@ -323,6 +346,7 @@ export class App {
           reopen: (task) => this.#reopen(task),
           highlightOpen: (task) => this.#highlightOpen(task),
           showTask: (id) => this.#showTask(id),
+          addSubtask: (task) => this.#addSubtask(task),
         },
       });
       this.#sections.set(project, section);

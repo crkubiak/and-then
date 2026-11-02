@@ -24,6 +24,9 @@ export class TaskInput {
     add.className = 'task-input-add';
     add.textContent = 'Add';
     this.#form.append(this.#input, add);
+    this.#input.addEventListener('input', () => {
+      if (this.#input.value === '') this.#pending = null; // emptied by hand: drop the pending step
+    });
     this.#form.addEventListener('submit', (event) => {
       event.preventDefault();
       this.#submit();
@@ -38,9 +41,11 @@ export class TaskInput {
   prefill(text, { caretAt = 'end', pending = null } = {}) {
     this.#input.value = text;
     this.#pending = pending;
-    this.#input.focus();
+    this.#input.focus({ preventScroll: true });
     const at = caretAt === 'start' ? 0 : text.length;
     this.#input.setSelectionRange(at, at);
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    this.#form.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
   }
 
   snapshot() {

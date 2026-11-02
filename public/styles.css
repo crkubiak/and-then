@@ -456,6 +456,35 @@ button.task-check:hover {
   line-height: 22px;
 }
 
+.task-add-sub {
+  padding: 0 var(--space-2);
+  background: none;
+  border: 1px solid var(--fg-muted);
+  border-radius: var(--radius-badge);
+  color: var(--fg-muted);
+  font: inherit;
+  line-height: 20px;
+  cursor: pointer;
+  opacity: 0; /* stays in the tab order; shown on hover and focus */
+}
+
+.task-row:hover .task-add-sub,
+.task-row:focus-within .task-add-sub,
+.task-add-sub:focus-visible {
+  opacity: 1;
+}
+
+.task-add-sub:hover {
+  border-color: var(--green);
+  color: var(--fg);
+}
+
+@media (hover: none), (max-width: 600px) {
+  .task-add-sub {
+    opacity: 1;
+  }
+}
+
 .task-progress,
 .task-id {
   color: var(--fg-muted);
