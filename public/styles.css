@@ -197,6 +197,25 @@ body {
   color: var(--fg);
 }
 
+.toolbar-button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-button[aria-disabled="true"]:hover {
+  border-color: var(--fg-muted);
+  color: var(--fg-muted);
+}
+
+.toolbar-count {
+  background: var(--green);
+  color: var(--bg-deep);
+}
+
+.toolbar-count[hidden] {
+  display: none;
+}
+
 .toolbar-problems {
   border-color: transparent;
   font-weight: 600;

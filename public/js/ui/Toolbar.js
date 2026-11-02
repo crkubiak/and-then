@@ -5,10 +5,12 @@ const STORAGE_KEY = 'taskflow.hideCompleted';
 export class Toolbar {
   #checkbox;
   #problems;
+  #sweep;
+  #sweepCount;
   #element;
 
   // `onHideChange()` runs after the toggle changes (read it back with `hideCompleted`).
-  constructor({ onHideChange, onExpandAll, onCollapseAll, onProblemsToggle }) {
+  constructor({ onHideChange, onExpandAll, onCollapseAll, onProblemsToggle, onSweep }) {
     this.#element = document.createElement('div');
     this.#element.className = 'toolbar';
     this.#element.setAttribute('role', 'toolbar');
@@ -33,6 +35,13 @@ export class Toolbar {
       Toolbar.#button('Expand All', 'toolbar:expand', onExpandAll),
       Toolbar.#button('Collapse All', 'toolbar:collapse', onCollapseAll),
     );
+    this.#sweep = Toolbar.#button('Sweep (30d+)', 'toolbar:sweep', () => {
+      if (this.#sweep.getAttribute('aria-disabled') !== 'true') onSweep();
+    });
+    this.#sweepCount = document.createElement('span');
+    this.#sweepCount.className = 'badge toolbar-count';
+    this.#sweep.append(' ', this.#sweepCount);
+    this.#element.append(this.#sweep);
     this.#problems = Toolbar.#button('', 'toolbar:problems', onProblemsToggle);
     this.#problems.setAttribute('aria-controls', 'problems-panel');
     this.#problems.setAttribute('aria-expanded', 'false');
@@ -51,6 +60,14 @@ export class Toolbar {
     this.#problems.className = `toolbar-button toolbar-problems ${errors > 0 ? 'is-error' : 'is-warning'}`;
     this.#problems.textContent = `${count} ${count === 1 ? 'problem' : 'problems'}`;
     this.#problems.setAttribute('aria-expanded', String(open));
+  }
+
+  // aria-disabled (not disabled) at 0 so the button keeps focus and its tooltip.
+  setSweep(count) {
+    this.#sweepCount.textContent = String(count);
+    this.#sweepCount.hidden = count === 0;
+    this.#sweep.setAttribute('aria-disabled', String(count === 0));
+    this.#sweep.title = count === 0 ? 'Nothing is old enough to sweep' : '';
   }
 
   get hideCompleted() {

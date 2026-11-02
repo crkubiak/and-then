@@ -8,6 +8,7 @@ import { ProjectPalette } from './ProjectPalette.js';
 import { ProjectSection } from './ProjectSection.js';
 import { EditRules } from '../rules/EditRules.js';
 import { NewTaskRules } from '../rules/NewTaskRules.js';
+import { SweepRules } from '../rules/SweepRules.js';
 import { Validator } from '../rules/Validator.js';
 import { VisibilityRules } from '../rules/VisibilityRules.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -37,6 +38,7 @@ export class App {
     onExpandAll: () => this.#setAllExpanded(true),
     onCollapseAll: () => this.#setAllExpanded(false),
     onProblemsToggle: () => this.#toggleProblems(),
+    onSweep: () => this.#sweep(),
   });
   #problemsPanel = new ProblemsPanel({ onSelect: (task) => this.#revealTask(task) });
   #problems = []; // validator problems plus their todo.txt task, rebuilt each render
@@ -416,6 +418,24 @@ export class App {
     el?.focus({ preventScroll: true });
   }
 
+  // PRD §6. The transform sweeps whatever qualifies on the list it is given, so a 409 retry
+  // recomputes on the fresh files. The server writes done.txt before todo.txt, and the
+  // append-then-remove order is inside SweepRules.sweep. An open editor blocks the sweep
+  // rather than losing its row to it.
+  #sweep() {
+    let swept = 0;
+    return this.#commit(
+      (list) => {
+        if (this.#editor) return 'Finish editing first.';
+        const result = SweepRules.sweep(list, App.today());
+        if (result.count === 0) return 'Nothing to sweep.';
+        swept = result.count;
+        return result.taskList;
+      },
+      { onSaved: () => this.toast.info(`Swept ${swept} ${swept === 1 ? 'task' : 'tasks'} to done.txt.`) },
+    );
+  }
+
   #toggleProblems() {
     this.#problemsOpen = !this.#problemsOpen;
     this.#syncProblems();
@@ -456,6 +476,7 @@ export class App {
 
   #render() {
     this.#validate();
+    this.#toolbar.setSweep(SweepRules.eligible(this.#taskList, App.today()).length);
     const empty = this.#taskList.todoTasks.length === 0;
     const main = this.#renderShell(empty ? null : this.#buildSummary());
     if (empty) main.append(this.#buildEmptyState());
