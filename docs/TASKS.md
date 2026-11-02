@@ -49,7 +49,7 @@ Ordered so each phase can be run and checked before the next one starts. Section
 ## Phase 6: Read-only UI (§5.1, §5.2, §5.3 display parts)
 
 - [x] 6.1 `FileStore` (client): load files, save with version, handle `409`
-- [ ] 6.2 `App`: wires the store, model, and views together and re-renders on change
+- [x] 6.2 `App`: wires the store, model, and views together and re-renders on change
 - [ ] 6.3 `ProjectSection`: accordions, Inbox at top, header summary, collapse state in `localStorage`
 - [ ] 6.4 `TaskRow`: badges, indentation, tree guide lines, subtree collapse toggle
 - [ ] 6.5 View-only sort order (§5.2)
