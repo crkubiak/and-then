@@ -106,6 +106,8 @@ Items raised while reviewing the running app. Picked up after the core run (Phas
 - [ ] 11.7 Inline subtask input. + Subtask opens an input directly under the parent row at the child indent. The user types only the description; the root project and `parent:` (with the parent's new id when needed) are added on save and never shown. Enter saves, Escape cancels. The top input stays for tasks without a parent. Update PRD §5.3.
 - [ ] 11.8 Validator: warn on a line with no description (only tags), which the UI now refuses to create.
 - [ ] 11.9 Hide the Blocked by pill on completed tasks. After a dependency override the task keeps `dep:`, so the pill still shows (ACCEPTANCE A1).
+- [ ] 11.10 Author tag. New `by:` extension naming who created a task: `by:me` for the user, `by:<Model>_<version>` for an agent (e.g. `by:Opus_5.5`, `by:Flash_3.1`; underscores display as spaces, like projects). The add input and + Subtask append `by:me`. Rows hide the token and show a small badge: muted "me", teal for agents. Edits never change it, and lines without it show no badge. Add `by:` to PRD §3 and require it in FORMAT.md for every line an agent creates.
+- [ ] 11.11 Age badge. Computed from the creation date at render time, never stored in the file. Under 30 days shows days (`0D`, `12D`), under a year shows whole months (`1M`, `5M`), then whole years (`1Y`). Open tasks only. Muted, in the row tail; the title gives the creation date. The creation date becomes required on every open task: a `missing-creation-date` validator error, FORMAT.md says so, and inline edit rejects removing it (the add input already stamps it). Update `samples/` and `expected.txt` to match.
 
 ---
 
