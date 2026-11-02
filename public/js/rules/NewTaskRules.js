@@ -10,7 +10,7 @@ export class NewTaskRules {
     if (!task || task.body.trim() === '') return { error: 'Enter a task description.' };
 
     if (task.id !== null && taskList.byId(task.id)) return { error: `id:${task.id} already exists.` };
-    const mismatch = NewTaskRules.#parentError(taskList, task);
+    const mismatch = NewTaskRules.parentError(taskList, task);
     if (mismatch) return { error: mismatch };
 
     if (task.creationDate) return { line: typed };
@@ -18,7 +18,8 @@ export class NewTaskRules {
     return { line: `${priority}${date} ${task.body}` };
   }
 
-  static #parentError(taskList, task) {
+  // Shared with EditRules. `task` is a parsed (not yet saved) line.
+  static parentError(taskList, task) {
     if (task.parentId === null) return null;
     const parent = taskList.byId(task.parentId);
     if (!parent || parent.file !== 'todo') return `parent:${task.parentId} is not a task in todo.txt.`;

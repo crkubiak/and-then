@@ -17,15 +17,18 @@ export class TaskRow {
   #today;
   #collapsedKeys;
   #actions;
+  #editor;
   #node;
   #children = null;
   #toggle = null;
   static #nextId = 0;
 
   // `collapsedKeys` is the App-owned Set of collapsed task keys (see TaskRow.keyOf).
-  // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task), showTask(id), addSubtask(task).
-  constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {} }) {
+  // `actions` are App callbacks: complete(task), reopen(task), highlightOpen(task), showTask(id), addSubtask(task), edit(task).
+  // `editor` is { key, element }: the open inline editor, shown in place of the description on the row with that key.
+  constructor({ task, taskList, palette, today, collapsedKeys = new Set(), actions = {}, editor = null }) {
     this.#task = task;
+    this.#editor = editor;
     this.#actions = actions;
     this.#collapsedKeys = collapsedKeys;
     this.#taskList = taskList;
@@ -48,14 +51,30 @@ export class TaskRow {
     if (task.priority) row.append(TaskRow.priorityBadge(task.priority));
 
     const main = TaskRow.#el('span', 'task-main');
-    main.append(TaskRow.#el('span', 'task-text', this.#visibleText()));
+    main.append(this.#description());
     for (const badge of this.#badges()) main.append(' ', badge);
+    if (this.#editor?.key === TaskRow.keyOf(task)) {
+      row.classList.add('is-editing'); // CSS hides the text and badges behind the editor
+      main.append(this.#editor.element);
+    }
     row.append(main);
 
     const tail = TaskRow.#el('span', 'task-tail');
     this.#appendTail(tail);
     row.append(tail);
     return row;
+  }
+
+  // A todo.txt description is a button that opens the inline editor.
+  #description() {
+    const text = this.#visibleText();
+    if (this.#task.file !== 'todo') return TaskRow.#el('span', 'task-text', text);
+    const button = TaskRow.#el('button', 'task-text task-text-edit', text);
+    button.type = 'button';
+    button.title = 'Edit task';
+    button.dataset.key = `text:${TaskRow.keyOf(this.#task)}`; // lets App restore focus after a re-render
+    button.addEventListener('click', () => this.#actions.edit?.(this.#task));
+    return button;
   }
 
   #toggleOrSpacer() {
@@ -97,7 +116,7 @@ export class TaskRow {
     this.#children.style.setProperty('--rail', `var(--${rail})`);
     this.#toggle.setAttribute('aria-controls', this.#children.id);
     for (const kid of SortOrder.sort(kids)) {
-      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions });
+      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys, actions: this.#actions, editor: this.#editor });
       this.#children.append(row.element);
     }
     this.#node.append(this.#children);

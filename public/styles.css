@@ -440,6 +440,36 @@ button.task-check:hover {
   line-height: 22px;
 }
 
+.task-text-edit {
+  display: inline;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-text-edit:hover {
+  box-shadow: 0 1px 0 var(--fg-muted); /* underline that keeps a completed task's line-through */
+}
+
+.task-edit {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--fg-muted);
+  border-radius: var(--radius-badge);
+  color: var(--fg);
+  font: inherit;
+  line-height: 20px;
+}
+
+.task-row.is-editing .task-main > :not(.task-edit) {
+  display: none;
+}
+
 .is-complete .task-text {
   color: var(--fg-muted);
   text-decoration: line-through;

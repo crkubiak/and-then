@@ -6,12 +6,15 @@ import { TaskSerializer } from '../model/TaskSerializer.js';
 import { CompletionRules } from '../rules/CompletionRules.js';
 import { ProjectPalette } from './ProjectPalette.js';
 import { ProjectSection } from './ProjectSection.js';
+import { EditRules } from '../rules/EditRules.js';
 import { NewTaskRules } from '../rules/NewTaskRules.js';
+import { TaskEditor } from './TaskEditor.js';
 import { TaskInput } from './TaskInput.js';
 import { TaskRow } from './TaskRow.js';
 import { Toast } from './Toast.js';
 
 const FLASH_MS = 1500;
+const CHANGED_ON_DISK = 'That task changed on disk. Your edit was not saved.';
 const NEW_ID = 'new'; // placeholder in a + Subtask prefill until the parent's id is allocated
 const NEW_ID_TOKEN = new RegExp(`(^|\\s)parent:${NEW_ID}(?=\\s|$)`);
 
@@ -27,6 +30,11 @@ export class App {
   #tail = Promise.resolve(); // commits and reloads run one at a time through this chain
   #reloadQueued = false;
   #latestVersion = null;
+  // Open inline editor: { task, draft, start, end, focused }. `draft` and the selection are
+  // synced from the live TaskEditor (#editorView) just before each re-render.
+  #editor = null;
+  #editorView = null;
+  #deferred = false; // a newer list was loaded while editing; the page shows an older one
   #sections = new Map(); // project (null = Inbox) to its ProjectSection, rebuilt each render
 
   constructor(root, { store = new FileStore() } = {}) {
@@ -79,8 +87,7 @@ export class App {
 
   async #reload() {
     try {
-      // Phase 8.5: defer this re-render while an inline editor is open.
-      this.setTaskList(new TaskList(await this.#store.load()));
+      this.#present(new TaskList(await this.#store.load()));
     } catch (err) {
       this.#showReloadError(err); // keep the current view
     }
@@ -89,11 +96,20 @@ export class App {
   // The one write path. `transform(taskList)` returns the new TaskList, or a string
   // (the reason it can't apply). It must find its target with taskList.locate(), never
   // hold a Task from an earlier list, so it can be re-run on fresh content after a 409.
-  #commit(transform) {
-    return this.#enqueue(() => this.#runCommit(transform));
+  // `onSaved` runs just before the saved list is rendered.
+  #commit(transform, { onSaved } = {}) {
+    return this.#enqueue(() => this.#runCommit(transform, onSaved));
   }
 
-  async #runCommit(transform) {
+  // Our own successful saves always render. A list that arrives from outside (live reload,
+  // 409) is only remembered while an inline editor is open, and rendered when it closes.
+  #present(list) {
+    if (this.#editor === null) return this.setTaskList(list);
+    this.#taskList = list;
+    this.#deferred = true;
+  }
+
+  async #runCommit(transform, onSaved) {
     try {
       const next = transform(this.#taskList);
       if (typeof next === 'string') {
@@ -102,11 +118,12 @@ export class App {
       }
       const result = await this.#store.save(next.toText());
       if (result.ok) {
+        onSaved?.();
         this.setTaskList(next);
         return true;
       }
       // Conflict. Phase 8.6 re-applies the transform here instead.
-      this.setTaskList(new TaskList(result.current));
+      this.#present(new TaskList(result.current));
       this.toast.info('The files changed on disk. Your change was not saved. Please retry.');
       return false;
     } catch (err) {
@@ -152,6 +169,66 @@ export class App {
     const project = this.#taskList.effectiveProject(parent);
     const text = ` ${project ? `+${project} ` : ''}parent:${parent.id ?? NEW_ID}`;
     this.#taskInput.prefill(text, { caretAt: 'start', pending: parent.id === null ? { parent } : null });
+  }
+
+  #startEdit(task) {
+    const target = this.#taskList.locate(task);
+    if (!target || target.file !== 'todo') return;
+    if (this.#editor) {
+      if (this.#isDirty()) return this.#editorView.focus(); // keep unsaved work; focus stays here
+      this.#closeEditor();
+    }
+    const raw = target.raw.replace(/\r$/, '');
+    this.#editor = { task: target, draft: raw, start: raw.length, end: raw.length, focused: true };
+    this.setTaskList(this.#taskList);
+  }
+
+  #isDirty() {
+    return this.#editorView.value.trim() !== this.#editor.task.raw.trim();
+  }
+
+  // Closes the editor without saving. In place when the page is current; else renders.
+  #closeEditor({ focusText = false } = {}) {
+    const task = this.#editor.task;
+    const view = this.#editorView;
+    this.#editor = null;
+    this.#editorView = null;
+    if (this.#deferred) this.setTaskList(this.#taskList);
+    else view.unmount();
+    if (focusText) this.#focusText(task);
+  }
+
+  #focusText(task) {
+    const key = `text:${TaskRow.keyOf(task)}`;
+    [...this.#root.querySelectorAll('[data-key]')].find((e) => e.dataset.key === key)?.focus({ preventScroll: true });
+  }
+
+  #onEditorBlur() {
+    if (this.#editor && !this.#isDirty()) this.#closeEditor(); // changed text stays open so a stray click loses nothing
+  }
+
+  async #saveEdit() {
+    const original = this.#editor.task;
+    const line = this.#editorView.value.trim();
+    if (line === original.raw.trim()) return this.#closeEditor({ focusText: true });
+    const saved = await this.#commit(
+      (list) => {
+        const target = list.locate(original);
+        if (!target || target.raw !== original.raw) return CHANGED_ON_DISK;
+        return EditRules.check(list, target, line) ?? list.replaceLine(target, line);
+      },
+      { onSaved: () => this.#dropEditor() },
+    );
+    if (!saved) return; // the reason was toasted; the editor stays open with its draft
+    const edited = this.#taskList.todoTasks.find((t) => t.raw === line);
+    if (edited) this.#focusText(edited);
+  }
+
+  // Forgets the editor so the next render shows plain rows.
+  #dropEditor() {
+    this.#editorView?.dispose();
+    this.#editor = null;
+    this.#editorView = null;
   }
 
   #reopen(task) {
@@ -240,13 +317,38 @@ export class App {
   // All rendering goes through here (initial load, live reload, actions).
   setTaskList(taskList) {
     this.#taskList = taskList;
+    this.#deferred = false;
     const scrollY = window.scrollY;
     const focusKey = this.#focusedKey();
     const inputState = this.#taskInput.snapshot(); // the input is detached and re-attached by #render
+    this.#syncEditor();
     this.#render();
     window.scrollTo(0, scrollY);
     this.#restoreFocus(focusKey);
     this.#taskInput.restore(inputState);
+    if (this.#editor) this.#editorView.restore(this.#editor);
+  }
+
+  // Carries the editor's draft and selection across a re-render. If its task has
+  // vanished from the list there is no row to put it on, so it is dropped.
+  #syncEditor() {
+    if (!this.#editor) return;
+    if (this.#editorView) {
+      Object.assign(this.#editor, this.#editorView.snapshot());
+      this.#editorView.dispose(); // the old input is about to be detached
+    }
+    if (this.#taskList.locate(this.#editor.task)) {
+      this.#editorView = new TaskEditor({
+        draft: this.#editor.draft,
+        onSave: () => this.#saveEdit(),
+        onCancel: () => this.#closeEditor({ focusText: true }),
+        onBlur: () => this.#onEditorBlur(),
+      });
+      return;
+    }
+    this.#editor = null;
+    this.#editorView = null;
+    this.toast.error(CHANGED_ON_DISK);
   }
 
   // Only section headers and row toggles carry a data-key.
@@ -341,17 +443,26 @@ export class App {
         palette,
         today,
         collapsedKeys: this.#collapsedKeys,
+        editor: this.#editorFor(),
         actions: {
           complete: (task) => this.#complete(task),
           reopen: (task) => this.#reopen(task),
           highlightOpen: (task) => this.#highlightOpen(task),
           showTask: (id) => this.#showTask(id),
           addSubtask: (task) => this.#addSubtask(task),
+          edit: (task) => this.#startEdit(task),
         },
       });
       this.#sections.set(project, section);
       main.append(section.element);
     }
+  }
+
+  // The open editor and the key of the row it replaces, in the current list.
+  #editorFor() {
+    if (!this.#editor) return null;
+    const task = this.#taskList.locate(this.#editor.task);
+    return { key: TaskRow.keyOf(task), element: this.#editorView.element };
   }
 
   // Inbox (null) first, then projects in order of first appearance.

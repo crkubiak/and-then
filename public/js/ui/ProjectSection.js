@@ -13,7 +13,7 @@ export class ProjectSection {
 
   // `project` is null for Inbox. `tasks` is the section's roots and all descendants;
   // `roots` are the top-level tasks the tree renders from.
-  constructor({ project, accent, roots, tasks, taskList, palette, today, collapsedKeys, actions }) {
+  constructor({ project, accent, roots, tasks, taskList, palette, today, collapsedKeys, actions, editor = null }) {
     this.#key = project ?? '';
     this.#section = document.createElement('section');
     this.#section.className = 'project-section';
@@ -21,7 +21,7 @@ export class ProjectSection {
 
     const bodyId = `project-body-${ProjectSection.#nextId++}`;
     this.#button = this.#buildHeader(project, tasks, bodyId);
-    this.#body = this.#buildBody(roots, taskList, palette, today, bodyId, collapsedKeys, actions);
+    this.#body = this.#buildBody(roots, taskList, palette, today, bodyId, collapsedKeys, actions, editor);
     this.#section.append(this.#button, this.#body);
 
     this.#button.addEventListener('click', () => this.setCollapsed(!this.isCollapsed));
@@ -85,11 +85,11 @@ export class ProjectSection {
     return bar;
   }
 
-  #buildBody(roots, taskList, palette, today, bodyId, collapsedKeys, actions) {
+  #buildBody(roots, taskList, palette, today, bodyId, collapsedKeys, actions, editor) {
     const body = this.#el('div', 'project-body');
     body.id = bodyId;
     for (const task of SortOrder.sort(roots)) {
-      body.append(new TaskRow({ task, taskList, palette, today, collapsedKeys, actions }).element);
+      body.append(new TaskRow({ task, taskList, palette, today, collapsedKeys, actions, editor }).element);
     }
     return body;
   }
