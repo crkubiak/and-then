@@ -129,8 +129,7 @@ export class TaskRow {
   }
 
   #dueBadge(due) {
-    const days = TaskRow.#daysBetween(this.#today, due);
-    const kind = days < 0 ? 'overdue' : days <= DUE_SOON_DAYS ? 'soon' : 'later';
+    const kind = TaskRow.dueKind(due, this.#today);
     const badge = TaskRow.#el('span', `badge badge-due badge-due-${kind}`, TaskRow.#formatDate(due, this.#today));
     badge.title = `Due ${due}`;
     return badge;
@@ -146,6 +145,13 @@ export class TaskRow {
       tail.append(TaskRow.#el('span', 'pill-blocked', `Blocked by #${task.depId}`));
     }
     if (task.id !== null) tail.append(TaskRow.#el('span', 'task-id', `#${task.id}`));
+  }
+
+  // 'overdue' | 'soon' | 'later', or null when `due` isn't a YYYY-MM-DD date.
+  static dueKind(due, today) {
+    if (due === null || !DATE.test(due)) return null;
+    const days = TaskRow.#daysBetween(today, due);
+    return days < 0 ? 'overdue' : days <= DUE_SOON_DAYS ? 'soon' : 'later';
   }
 
   static priorityBadge(letter) {

@@ -53,7 +53,7 @@ Ordered so each phase can be run and checked before the next one starts. Section
 - [x] 6.3 `ProjectSection`: accordions, Inbox at top, header summary, collapse state in `localStorage`
 - [x] 6.4 `TaskRow`: badges, indentation, tree guide lines, subtree collapse toggle
 - [x] 6.5 View-only sort order (§5.2)
-- [ ] 6.6 `styles.css` base layout
+- [x] 6.6 `styles.css` base layout
 
 **Check:** the sample data renders correctly, with no write actions yet.
 
