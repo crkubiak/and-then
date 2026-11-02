@@ -186,6 +186,43 @@ A slide-over drawer with editable `todo.txt` and `done.txt` text areas. Saving r
 
 A toolbar badge shows the count of validation problems. Opening it lists each problem with its file, line number, and message. Clicking a problem scrolls to the task.
 
+### 5.7 Visual design
+
+Minimal layout, generous color. Dark theme only, built on the gruvbox-baby dark high-contrast palette. All colors are CSS custom properties on `:root` in `styles.css`. Components never use raw hex values.
+
+| Token | Hex | Source |
+| :--- | :--- | :--- |
+| `--green` | `#8ec07c` | palette |
+| `--teal` | `#458588` | palette |
+| `--yellow` | `#eebd35` | palette |
+| `--red` | `#cc241d` | palette |
+| `--bg` | `#32302f` | palette |
+| `--bg-deep` | `#282828` | gruvbox, page background |
+| `--surface` | `#3c3836` | gruvbox, section and row hover |
+| `--fg` | `#ebdbb2` | gruvbox, body text |
+| `--fg-muted` | `#a89984` | gruvbox, secondary text |
+
+**Contrast rule:** red and teal are too dark for small text on dark backgrounds. Use them only as fills, borders, and badge backgrounds with `--bg-deep` or `--fg` text on top. Green and yellow may be used as text.
+
+**Color assignments:**
+
+| Element | Color |
+| :--- | :--- |
+| Priority `(A)` | red badge |
+| Priority `(B)` | yellow badge |
+| Priority `(C)` | green badge |
+| Priority `(D)` to `(Z)` | teal badge |
+| Project sections | each project gets an accent from the rotation green, yellow, teal, red, assigned in order of first appearance; used for the header bar, the progress bar fill, and that project's badges elsewhere. Inbox uses `--fg-muted`. |
+| `@context` | teal badge |
+| Due date | overdue: red badge. Due within 3 days: yellow badge. Later: green text. |
+| Blocked-by pill | yellow outline |
+| Validation error / warning badge | red / yellow |
+| Completed task | `--fg-muted` text with strikethrough and a green check |
+| Tree guide lines | teal |
+| Focus ring | yellow |
+
+**Layout:** one centered column (max about 760px), system font stack, no shadows or gradients. Spacing and color carry the structure instead of borders. The layout works at phone width with no horizontal scroll.
+
 ---
 
 ## 6. Sweeping to `done.txt`
