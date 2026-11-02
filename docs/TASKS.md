@@ -93,6 +93,15 @@ This phase comes before the write actions so that the conflict handling in Phase
 - [ ] 10.1 Go through the §9 examples and each rule in §4 and §6 by hand in the UI
 - [ ] 10.2 Have the agent make a set of edits following `FORMAT.md`, then confirm the live reload, the validator, and the Problems panel agree
 
+## Phase 11: Review feedback
+
+Items raised while reviewing the running app. Picked up after the core run (Phases 8 to 10).
+
+- [ ] 11.1 New-task indicator. After each reload, diff task keys (`id:` first, exact line as fallback) against the known set kept in `localStorage`. The first load ever is a baseline, so nothing is new. Unknown keys get a yellow dot and bold text. Tasks added from the app are marked seen immediately.
+- [ ] 11.2 Edited-task indicator. A task whose `id:` is known but whose line changed gets its own marker, distinct from new. Same storage, seen rules, and pill as 11.1.
+- [ ] 11.3 Collapsed rollup. A collapsed row shows a yellow "+N new" pill next to its subtask counter, counting new and edited tasks anywhere beneath it, at every collapsed ancestor level. Collapsed project headers get the same pill.
+- [ ] 11.4 Seen rules. A marker clears once the row has been on screen for about 1.5 seconds with the tab visible, or right away on click or focus. A task under a collapsed parent stays marked until it is expanded and seen.
+
 ---
 
 ## File tree
