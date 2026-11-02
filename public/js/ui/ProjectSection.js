@@ -1,4 +1,5 @@
 import { ProjectPalette } from './ProjectPalette.js';
+import { SortOrder } from '../rules/SortOrder.js';
 import { TaskRow } from './TaskRow.js';
 
 const STORAGE_KEY = 'taskflow.collapsed';
@@ -86,7 +87,7 @@ export class ProjectSection {
   #buildBody(roots, taskList, palette, today, bodyId) {
     const body = this.#el('div', 'project-body');
     body.id = bodyId;
-    for (const task of roots) {
+    for (const task of SortOrder.sort(roots)) {
       body.append(new TaskRow({ task, taskList, palette, today }).element);
     }
     return body;

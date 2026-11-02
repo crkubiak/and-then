@@ -1,4 +1,5 @@
 import { ProjectPalette } from './ProjectPalette.js';
+import { SortOrder } from '../rules/SortOrder.js';
 import { VisibilityRules } from '../rules/VisibilityRules.js';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -75,7 +76,7 @@ export class TaskRow {
     this.#children = TaskRow.#el('div', 'task-children');
     this.#children.id = `task-children-${TaskRow.#nextId++}`;
     this.#toggle.setAttribute('aria-controls', this.#children.id);
-    for (const kid of kids) {
+    for (const kid of SortOrder.sort(kids)) {
       const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today });
       this.#children.append(row.element);
     }
