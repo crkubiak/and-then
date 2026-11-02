@@ -2,11 +2,11 @@
 
 TaskFlow keeps tasks in two plain text files, `data/todo.txt` (open and recently completed work) and `data/done.txt` (the archive). One line is one task. You may edit both files directly, and the web app may be open at the same time. The app cannot overwrite your edits: its saves are rejected if either file changed since it last read them.
 
-**Golden rule:** after every edit, run `node validate.js` from the repo root. Fix every error. Read every warning and fix it unless the user wants it that way. Exit code 0 means no errors, 1 means errors exist.
+**Golden rule:** after every edit, run `node validate.js <folder>` from the repo root, where `<folder>` is the folder holding the files you edited (the one the server was started on). With no argument it checks `data/`. Fix every error. Read every warning and fix it unless the user wants it that way. Exit code 0 means no errors, 1 means errors exist, 2 means the folder was not found.
 
 ## Line anatomy
 
-Active task: `[(P) ]CREATION description`. Every open line must start with a creation date (after the priority, if any).
+Active task: `[(P) ]CREATION description`
 
 ```
 (A) 2026-10-30 Call supplier +Infrastructure @phone id:10 parent:8 dep:5 due:2026-11-15
@@ -33,9 +33,7 @@ x 2026-11-02 2026-10-30 (A) Call supplier +Infrastructure @phone id:10
 | `id:ID` | Unique ID, numeric (`id:12`) or semantic (`id:db-init`). |
 | `parent:ID` | Nests the task under that task. |
 | `dep:ID` | Blocked until that task is complete. |
-| `needs:human` | Blocked on the user. Add it when you need a decision, credentials or a review: remove your `wip:` at the same time and write the question in the task text or a subtask. The only supported value is `human`. |
-| `wip:Model_version` | In progress. Add it (e.g. `wip:Opus_5.5`) when you start on a task. Remove it when you stop or finish it. |
-| `by:Model_version` | Author. Every line you create must include it, e.g. `by:Opus_5.5` (no spaces). The app uses `by:me` for the user. Never change an existing `by:`. |
+| `by:`, `wip:`, `needs:human` | Agent tags. See Tags agents manage. |
 
 Other `key:value` words (letters, digits, `_`, `-` in the key) are kept as tags and ignored. A value starting with `/` is not a tag, so URLs are safe. `#`, `^`, `~` and `!` have no meaning. `#482` is plain text. A bare `+` or `@` is plain text, and so is `a+b@c`.
 
@@ -48,15 +46,100 @@ Other `key:value` words (letters, digits, `_`, `-` in the key) are kept as tags 
 
 ## How to
 
-**Add a task:** append a line with today's creation date: `2026-11-02 Order rack mounts +Infrastructure @office by:Opus_5.5`.
+**Add a task:** append a line with today's creation date and your `by:` tag: `2026-11-02 Order rack mounts +Infrastructure @office by:Opus_5.5`.
 
-**Complete a task:** replace the line with `x TODAY` plus the creation date (if any), the priority (if any), then the description unchanged.
-`(A) 2026-10-30 Call +Infra id:10` becomes `x 2026-11-02 2026-10-30 (A) Call +Infra id:10`. Leave `dep:` and every other token in place.
+**Complete a task:** replace the line with `x TODAY`, the creation date, the priority (if any), then the description unchanged.
+`(A) 2026-10-30 Call +Infra id:10` becomes `x 2026-11-02 2026-10-30 (A) Call +Infra id:10`. Leave `dep:` and every other token in place, except `wip:` and `needs:` (see Tags agents manage).
 
 **Reopen a task:** drop `x` and the completion date, and put the priority first, then the creation date.
 `x 2026-11-02 2026-10-30 (A) Call +Infra id:10` becomes `(A) 2026-10-30 Call +Infra id:10`.
 
 **Add a subtask:** give the parent an `id:` if it has none (see IDs), then add a line with `parent:ID`. Either omit the project or use the root task's primary project. A subtask may not name a different project, and a subtask under a root with no project may not name one at all.
+
+## Tags agents manage
+
+Write these exactly as shown. A `Model_version` value has no spaces (`Opus_5.5`, `Flash_3.1`). Underscores display as spaces. Never repeat a key on one line.
+
+### Creation date
+
+- **Means:** when the task was created.
+- **Syntax:** `YYYY-MM-DD`, directly after the priority if there is one: `(A) 2026-11-02 Call supplier`.
+- **Add:** on every open line you write, with today's date. A task with no date gets today's date.
+- **Change or remove:** keep it. It carries over to the completed line (`x 2026-11-03 2026-11-02 ...`). Completed lines and `done.txt` may lack one.
+- **App:** shows an age badge on open tasks (`3D`, `2M`, `1Y`), computed at render time and never stored. The add input and inline edit enforce it.
+- **Validator:** `missing-creation-date` (error), `bad-date` (error), `loose-date` (warning).
+
+### `by:`
+
+- **Means:** who created the task. `by:me` is the user. You are `by:<Model>_<version>`.
+- **Syntax:** `by:Opus_5.5`.
+- **Add:** on every line you create, including subtasks.
+- **Change or remove:** never. Do not add one to a line you did not create. The app refuses edits that change or remove it. A missing `by:` on older lines is fine.
+- **App:** hides the token and shows a badge before the ID: muted "me", or a teal badge for an agent.
+- **Validator:** none beyond `duplicate-key`.
+
+### `wip:`
+
+- **Means:** an agent is working on this task right now.
+- **Syntax:** `wip:Opus_5.5`.
+- **Add:** when you start working on an open task.
+- **Remove:** when you stop, when you hand the task to the user, and when you complete it.
+- **App:** hides the token and shows a pulsing yellow "Opus 5.5 working" pill on open tasks. Completing from the app strips it. Inline edit may add, change or remove it.
+- **Validator:** `wip-on-complete` (warning, either file).
+
+### `needs:human`
+
+- **Means:** you are blocked on the user: a decision, credentials or a review.
+- **Syntax:** `needs:human`. No other value is supported.
+- **Add:** when you cannot continue without the user. Remove your `wip:` in the same edit. Write the question in the task text, or better as a subtask (`parent:` the blocked task) so the user can complete it as the answer.
+- **Remove:** only after the user has answered. Then resume with a fresh `wip:`, or leave the task idle.
+- **App:** hides the token and shows a red "Human" pill first in the row, and "N need you" in the header, which jumps from task to task. Clicking the Human pill asks to clear it. Completing from the app strips it.
+- **Validator:** `needs-on-complete` (warning, either file), `unknown-needs` (warning).
+
+### Other tokens
+
+`id:`, `parent:` and `dep:`: see IDs and Hierarchy and dependencies. `due:`: see Tokens.
+
+### Worked session
+
+Create a task:
+
+```
+2026-11-02 Draft rollout plan +Infra id:20 by:Opus_5.5
+```
+
+Start work. Add `wip:`:
+
+```
+2026-11-02 Draft rollout plan +Infra id:20 by:Opus_5.5 wip:Opus_5.5
+```
+
+Blocked on the user. Swap `wip:` for `needs:human` and add the question as a subtask:
+
+```
+2026-11-02 Draft rollout plan +Infra id:20 by:Opus_5.5 needs:human
+2026-11-02 Which region goes first? parent:20 by:Opus_5.5
+```
+
+The user answers: they complete the subtask and clear the Human pill. Check that `needs:human` is gone, then resume:
+
+```
+2026-11-02 Draft rollout plan +Infra id:20 by:Opus_5.5 wip:Opus_5.5
+x 2026-11-03 2026-11-02 Which region goes first? parent:20 by:Opus_5.5
+```
+
+Finish. Complete the line and remove `wip:` (and `needs:` if present):
+
+```
+x 2026-11-03 2026-11-02 Draft rollout plan +Infra id:20 by:Opus_5.5
+x 2026-11-03 2026-11-02 Which region goes first? parent:20 by:Opus_5.5
+```
+
+### Cleanup
+
+- **A `wip:` you did not set:** leave it alone. Remove it only when the user says that agent is not running. The user can also remove it by hand or with inline edit.
+- **A `needs:human` you set:** the user clears it (Human pill, or by completing the task). You remove it only after the user has answered.
+- **Completed lines:** never leave `wip:` or `needs:` on them. The validator warns on both.
 
 ## IDs
 
@@ -114,7 +197,7 @@ Order matters. First append the lines to `done.txt`, unchanged and in their orig
 2026-10-30 Get quotes +Infra parent:1 id:2
 2026-10-31 Order racks parent:1 id:3 dep:2
 (B) 2026-10-30 Book downtime +Infra @phone parent:1
-Pick team lunch spot @office
+2026-10-31 Pick team lunch spot @office
 x 2026-11-01 2026-10-30 Renew license +Ops id:4
 ```
 
