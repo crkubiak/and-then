@@ -4,6 +4,7 @@ import { TaskList } from '../model/TaskList.js';
 import { ProjectPalette } from './ProjectPalette.js';
 import { ProjectSection } from './ProjectSection.js';
 import { TaskRow } from './TaskRow.js';
+import { Toast } from './Toast.js';
 
 export class App {
   #root;
@@ -14,10 +15,17 @@ export class App {
   #dot = null;
   #reloading = false;
   #reloadAgain = false;
+  #toast = null;
 
   constructor(root, { store = new FileStore() } = {}) {
     this.#root = root;
     this.#store = store;
+  }
+
+  // Created on first use, mounted on <body> so #renderShell never removes it.
+  get toast() {
+    this.#toast ??= new Toast();
+    return this.#toast;
   }
 
   // The one place the UI reads the clock. Local date, not UTC.
