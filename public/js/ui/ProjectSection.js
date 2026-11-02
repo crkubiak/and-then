@@ -1,0 +1,132 @@
+import { ProjectPalette } from './ProjectPalette.js';
+
+const STORAGE_KEY = 'taskflow.collapsed';
+
+export class ProjectSection {
+  #key;
+  #button;
+  #body;
+  #section;
+  static #nextId = 0;
+
+  // `project` is null for Inbox. `tasks` is the section's roots and all descendants.
+  constructor({ project, accent, tasks, taskList }) {
+    this.#key = project ?? '';
+    this.#section = document.createElement('section');
+    this.#section.className = 'project-section';
+    this.#section.style.setProperty('--accent', `var(--${accent === 'muted' ? 'fg-muted' : accent})`);
+
+    const bodyId = `project-body-${ProjectSection.#nextId++}`;
+    this.#button = this.#buildHeader(project, tasks, bodyId);
+    this.#body = this.#buildBody(tasks, taskList, bodyId);
+    this.#section.append(this.#button, this.#body);
+
+    this.#button.addEventListener('click', () => this.setCollapsed(!this.isCollapsed));
+    this.#apply(ProjectSection.#readCollapsed().has(this.#key));
+  }
+
+  get element() {
+    return this.#section;
+  }
+
+  get isCollapsed() {
+    return this.#button.getAttribute('aria-expanded') === 'false';
+  }
+
+  setCollapsed(collapsed) {
+    this.#apply(collapsed);
+    const keys = ProjectSection.#readCollapsed();
+    if (collapsed) keys.add(this.#key);
+    else keys.delete(this.#key);
+    ProjectSection.#writeCollapsed(keys);
+  }
+
+  #apply(collapsed) {
+    this.#button.setAttribute('aria-expanded', String(!collapsed));
+    this.#body.hidden = collapsed;
+    this.#section.classList.toggle('is-collapsed', collapsed);
+  }
+
+  #buildHeader(project, tasks, bodyId) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'project-header';
+    button.setAttribute('aria-controls', bodyId);
+
+    const chevron = this.#el('span', 'chevron', '▸');
+    chevron.setAttribute('aria-hidden', 'true');
+    const title = this.#el('span', 'project-title', ProjectPalette.displayName(project));
+
+    const total = tasks.length;
+    const done = tasks.filter((t) => t.complete).length;
+    const counts = this.#el('span', 'project-counts', `${total - done} active / ${total} total`);
+
+    button.append(chevron, title, counts);
+    const priority = ProjectSection.#highestOpenPriority(tasks);
+    if (priority) button.append(this.#priorityBadge(priority));
+    button.append(this.#progressBar(done, total));
+    return button;
+  }
+
+  #priorityBadge(letter) {
+    const group = /^[ABC]$/.test(letter) ? letter.toLowerCase() : 'other';
+    const badge = this.#el('span', `badge badge-priority badge-priority-${group}`, `(${letter})`);
+    badge.title = 'Highest open priority';
+    return badge;
+  }
+
+  #progressBar(done, total) {
+    const bar = this.#el('span', 'progress');
+    bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-label', 'Completed');
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', String(total));
+    bar.setAttribute('aria-valuenow', String(done));
+    const fill = this.#el('span', 'progress-fill');
+    fill.style.width = total === 0 ? '0%' : `${(done / total) * 100}%`;
+    bar.append(fill);
+    return bar;
+  }
+
+  // TEMPORARY: replaced in 6.4 by TaskRow.
+  #buildBody(tasks, taskList, bodyId) {
+    const body = this.#el('div', 'project-body');
+    body.id = bodyId;
+    for (const task of tasks) {
+      const line = this.#el('div', 'temp-task-line', task.body);
+      line.style.paddingLeft = `calc(var(--space-6) * ${taskList.ancestors(task).length})`;
+      body.append(line);
+    }
+    return body;
+  }
+
+  #el(tag, className, text) {
+    const el = document.createElement(tag);
+    el.className = className;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+
+  static #highestOpenPriority(tasks) {
+    const letters = tasks.filter((t) => !t.complete && t.priority).map((t) => t.priority);
+    return letters.length ? letters.reduce((a, b) => (a < b ? a : b)) : null;
+  }
+
+  // Storage can be blocked or hold junk; fall back to "nothing collapsed".
+  static #readCollapsed() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      return new Set(Array.isArray(parsed) ? parsed.filter((k) => typeof k === 'string') : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  static #writeCollapsed(keys) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([...keys]));
+    } catch {
+      // Blocked or full: collapse still works for this page view.
+    }
+  }
+}

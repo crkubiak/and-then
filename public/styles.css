@@ -14,9 +14,9 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
+  --space-8: 32px;
   --radius: 6px;
   --radius-badge: 4px;
-  --column: 760px;
 }
 
 * {
@@ -37,9 +37,13 @@ body {
 }
 
 #app {
-  max-width: var(--column);
-  margin: 0 auto;
-  padding: 0 var(--space-4) var(--space-6);
+  padding: 0 var(--space-8) var(--space-6);
+}
+
+@media (max-width: 600px) {
+  #app {
+    padding: 0 var(--space-4) var(--space-6);
+  }
 }
 
 .app-header {
@@ -69,9 +73,97 @@ body {
 .accent-strip span:nth-child(3) { background: var(--teal); }
 .accent-strip span:nth-child(4) { background: var(--red); }
 
-.temp-task-list {
+.app-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.project-section {
+  --accent: var(--fg-muted);
+  background: var(--bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.project-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  width: 100%;
   margin: 0;
-  padding-left: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 0;
+  border-left: 4px solid var(--accent);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-title {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.project-counts {
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+}
+
+.chevron {
+  display: inline-block;
+  width: 1em;
+  color: var(--fg-muted);
+  transition: transform 120ms ease-out;
+  transform: rotate(90deg);
+}
+
+.is-collapsed .chevron {
+  transform: none;
+}
+
+.progress {
+  flex: 1 1 64px;
+  min-width: 64px;
+  max-width: 160px;
+  height: 6px;
+  margin-left: auto;
+  background: var(--bg-deep);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Red and teal are fills only: light or deep text on top, never as text. */
+.badge {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-badge);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.badge-priority-a { background: var(--red); color: var(--fg); }
+.badge-priority-b { background: var(--yellow); color: var(--bg-deep); }
+.badge-priority-c { background: var(--green); color: var(--bg-deep); }
+.badge-priority-other { background: var(--teal); color: var(--fg); }
+
+.project-body {
+  padding: var(--space-2) var(--space-4) var(--space-3);
+}
+
+.temp-task-line {
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
 }
 
 .error-badge {

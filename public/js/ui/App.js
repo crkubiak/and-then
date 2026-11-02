@@ -1,5 +1,7 @@
 import { FileStore } from '../io/FileStore.js';
 import { TaskList } from '../model/TaskList.js';
+import { ProjectPalette } from './ProjectPalette.js';
+import { ProjectSection } from './ProjectSection.js';
 
 export class App {
   #root;
@@ -35,7 +37,7 @@ export class App {
 
   #render() {
     const main = this.#renderShell();
-    this.#renderTasks(main);
+    this.#renderSections(main);
   }
 
   #renderShell() {
@@ -55,16 +57,30 @@ export class App {
     return main;
   }
 
-  // TEMPORARY: replaced in 6.3 by ProjectSection accordions.
-  #renderTasks(main) {
-    const list = document.createElement('ul');
-    list.className = 'temp-task-list';
-    for (const task of this.#taskList.todoTasks) {
-      const item = document.createElement('li');
-      item.textContent = task.body;
-      list.append(item);
+  #renderSections(main) {
+    const palette = new ProjectPalette(this.#taskList);
+    for (const [project, tasks] of this.#groupByProject()) {
+      const section = new ProjectSection({
+        project,
+        accent: palette.accent(project),
+        tasks,
+        taskList: this.#taskList,
+      });
+      main.append(section.element);
     }
-    main.append(list);
+  }
+
+  // Inbox (null) first, then projects in order of first appearance.
+  // A section holds its roots and all their descendants.
+  #groupByProject() {
+    const groups = new Map([[null, []]]);
+    for (const root of this.#taskList.roots()) {
+      const project = this.#taskList.effectiveProject(root);
+      if (!groups.has(project)) groups.set(project, []);
+      groups.get(project).push(root, ...this.#taskList.descendants(root));
+    }
+    if (groups.get(null).length === 0) groups.delete(null);
+    return groups;
   }
 
   #renderError(err) {
