@@ -33,6 +33,7 @@ x 2026-11-02 2026-10-30 (A) Call supplier +Infrastructure @phone id:10
 | `id:ID` | Unique ID, numeric (`id:12`) or semantic (`id:db-init`). |
 | `parent:ID` | Nests the task under that task. |
 | `dep:ID` | Blocked until that task is complete. |
+| `by:Model_version` | Author. Every line you create must include it, e.g. `by:Opus_5.5` (no spaces). The app uses `by:me` for the user. Never change an existing `by:`. |
 
 Other `key:value` words (letters, digits, `_`, `-` in the key) are kept as tags and ignored. A value starting with `/` is not a tag, so URLs are safe. `#`, `^`, `~` and `!` have no meaning. `#482` is plain text. A bare `+` or `@` is plain text, and so is `a+b@c`.
 
@@ -45,7 +46,7 @@ Other `key:value` words (letters, digits, `_`, `-` in the key) are kept as tags 
 
 ## How to
 
-**Add a task:** append a line with today's creation date: `2026-11-02 Order rack mounts +Infrastructure @office`.
+**Add a task:** append a line with today's creation date: `2026-11-02 Order rack mounts +Infrastructure @office by:Opus_5.5`.
 
 **Complete a task:** replace the line with `x TODAY` plus the creation date (if any), the priority (if any), then the description unchanged.
 `(A) 2026-10-30 Call +Infra id:10` becomes `x 2026-11-02 2026-10-30 (A) Call +Infra id:10`. Leave `dep:` and every other token in place.

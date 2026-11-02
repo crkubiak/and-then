@@ -5,7 +5,7 @@ import { VisibilityRules } from '../rules/VisibilityRules.js';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const HIDDEN_TAG = /^(id|parent|dep|due):\S*$/;
+const HIDDEN_TAG = /^(id|parent|dep|due|by):\S*$/;
 const DUE_SOON_DAYS = 3;
 
 // One task plus, nested beneath it, a container with a TaskRow per child.
@@ -260,7 +260,16 @@ export class TaskRow {
       pill.addEventListener('click', () => this.#actions.showTask?.(task.depId));
       tail.append(pill);
     }
+    if (task.by !== null) tail.append(TaskRow.#authorBadge(task.by));
     if (task.id !== null) tail.append(TaskRow.#el('span', 'task-id', `#${task.id}`));
+  }
+
+  // `by:me` is plain muted text; any other value is an agent and gets a teal fill.
+  static #authorBadge(by) {
+    const name = ProjectPalette.displayName(by);
+    const badge = TaskRow.#el('span', by === 'me' ? 'badge badge-author' : 'badge badge-author badge-author-agent', name);
+    badge.title = `Added by ${name}`;
+    return badge;
   }
 
   static #problemBadge(problems) {

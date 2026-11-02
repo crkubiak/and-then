@@ -1,7 +1,7 @@
 import { TaskParser } from '../model/TaskParser.js';
 
 // PRD §5.4 and §3.2: validates a raw line typed into the add input and stamps
-// the creation date. Returns { line } or { error }.
+// the creation date and `by:me`. Returns { line } or { error }.
 export class NewTaskRules {
   static prepare(taskList, text, date) {
     const typed = text.trim();
@@ -13,9 +13,11 @@ export class NewTaskRules {
     const mismatch = NewTaskRules.parentError(taskList, task);
     if (mismatch) return { error: mismatch };
 
-    if (task.creationDate) return { line: typed };
+    // Lines made in the UI are the user's own unless they already name an author.
+    const author = task.by === null ? ' by:me' : '';
+    if (task.creationDate) return { line: `${typed}${author}` };
     const priority = task.priority ? `(${task.priority}) ` : '';
-    return { line: `${priority}${date} ${task.body}` };
+    return { line: `${priority}${date} ${task.body}${author}` };
   }
 
   // Shared with EditRules. `task` is a parsed (not yet saved) line.

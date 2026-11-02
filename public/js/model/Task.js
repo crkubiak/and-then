@@ -41,6 +41,10 @@ export class Task {
     return this.#tag('dep');
   }
 
+  get by() {
+    return this.#tag('by');
+  }
+
   get due() {
     return this.#tag('due');
   }

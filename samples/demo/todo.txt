@@ -1,13 +1,13 @@
-(A) 2026-10-20 Plan data center rack upgrade +Infra id:1 due:2026-11-20
-(A) 2026-10-20 Get vendor quotes parent:1 @phone id:2 due:2026-10-28
-2026-10-21 Compare quotes in a spreadsheet parent:2 @laptop id:3
+(A) 2026-10-20 Plan data center rack upgrade +Infra id:1 due:2026-11-20 by:me
+(A) 2026-10-20 Get vendor quotes parent:1 @phone id:2 due:2026-10-28 by:Opus_5.5
+2026-10-21 Compare quotes in a spreadsheet parent:2 @laptop id:3 by:me
 x 2026-10-25 2026-10-21 Request quotes from three vendors +Infra parent:2 id:4
-(B) 2026-10-22 Order rack hardware parent:1 id:5 dep:2 due:2026-11-12
+(B) 2026-10-22 Order rack hardware parent:1 id:5 dep:2 due:2026-11-12 by:Flash_3.1
 2026-10-22 Schedule downtime window parent:1 id:6 dep:4
 (C) 2026-10-24 Update runbook after upgrade +Infra @office id:7 dep:50
-2026-10-26 Renew TLS certificates +Infra @laptop id:8 due:2026-10-31
+2026-10-26 Renew TLS certificates +Infra @laptop id:8 due:2026-10-31 by:Opus_5.5
 
-(B) 2026-10-18 Set up home office +Home_Office id:9
+(B) 2026-10-18 Set up home office +Home_Office id:9 by:me
 2026-10-18 Buy standing desk parent:9 @errands id:10 due:2026-11-08
 2026-10-19 Fix cable management parent:9 id:11
 x 2026-10-30 2026-10-19 Order monitor arm +Home_Office parent:9 id:12

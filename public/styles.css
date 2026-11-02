@@ -592,6 +592,8 @@ button.problem-item:hover {
 .badge-problem-warning { background: var(--yellow); color: var(--bg-deep); }
 .badge-anchor { background: var(--yellow); color: var(--bg-deep); }
 .badge-due-later { padding: 0; color: var(--green); }
+.badge-author { padding: 0; color: var(--fg-muted); font-weight: 400; }
+.badge-author-agent { padding: 0 var(--space-2); background: var(--teal); color: var(--fg); font-weight: 600; }
 
 .pill-blocked {
   padding: 0 var(--space-2);

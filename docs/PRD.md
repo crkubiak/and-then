@@ -81,6 +81,7 @@ x 2026-10-30 2026-10-25 (A) Call supplier about server racks +Infrastructure @ph
 | Task ID | `id:ID` | Unique identifier, numeric (`id:12`) or semantic (`id:db-init`). |
 | Parent | `parent:ID` | Nests the task under the task with that ID. Multiple levels are supported. |
 | Dependency | `dep:ID` | The task is blocked until the task with that ID is complete. |
+| Author | `by:me` or `by:Model_version` | Who created the task: `me` for the user, `Opus_5.5` style for an agent. No spaces, underscores display as spaces. Rows hide it and show a badge (muted "me", teal for agents). Lines without it show no badge, and a missing `by:` is not a validation problem. The add input and + Subtask stamp `by:me` unless the typed line has one. Inline edit can add `by:` but never change or remove one. |
 
 ### 3.1 Hierarchy vs. dependency
 
