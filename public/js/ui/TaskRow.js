@@ -14,13 +14,16 @@ export class TaskRow {
   #taskList;
   #palette;
   #today;
+  #collapsedKeys;
   #node;
   #children = null;
   #toggle = null;
   static #nextId = 0;
 
-  constructor({ task, taskList, palette, today }) {
+  // `collapsedKeys` is the App-owned Set of collapsed task keys (see TaskRow.keyOf).
+  constructor({ task, taskList, palette, today, collapsedKeys = new Set() }) {
     this.#task = task;
+    this.#collapsedKeys = collapsedKeys;
     this.#taskList = taskList;
     this.#palette = palette;
     this.#today = today;
@@ -56,9 +59,10 @@ export class TaskRow {
     button.type = 'button';
     button.setAttribute('aria-expanded', 'true');
     button.setAttribute('aria-label', 'Toggle subtasks');
+    button.dataset.key = `row:${TaskRow.keyOf(this.#task)}`; // lets App restore focus after a re-render
     button.append(TaskRow.#el('span', 'chevron', '▸'));
     button.firstChild.setAttribute('aria-hidden', 'true');
-    button.addEventListener('click', () => this.#setExpanded(button.getAttribute('aria-expanded') !== 'true'));
+    button.addEventListener('click', () => this.#toggleExpanded(button.getAttribute('aria-expanded') !== 'true'));
     this.#toggle = button;
     return button;
   }
@@ -69,7 +73,14 @@ export class TaskRow {
     this.#node.classList.toggle('is-collapsed', !expanded);
   }
 
-  // Session-only state: lives in the DOM, so a re-render resets it.
+  #toggleExpanded(expanded) {
+    this.#setExpanded(expanded);
+    const key = TaskRow.keyOf(this.#task);
+    if (expanded) this.#collapsedKeys.delete(key);
+    else this.#collapsedKeys.add(key);
+  }
+
+  // Collapse state is session-only and lives in the App's Set, so it survives re-renders.
   #buildChildren() {
     const kids = this.#taskList.children(this.#task);
     if (kids.length === 0) return;
@@ -81,10 +92,11 @@ export class TaskRow {
     this.#children.style.setProperty('--rail', `var(--${rail})`);
     this.#toggle.setAttribute('aria-controls', this.#children.id);
     for (const kid of SortOrder.sort(kids)) {
-      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today });
+      const row = new TaskRow({ task: kid, taskList: this.#taskList, palette: this.#palette, today: this.#today, collapsedKeys: this.#collapsedKeys });
       this.#children.append(row.element);
     }
     this.#node.append(this.#children);
+    if (this.#collapsedKeys.has(TaskRow.keyOf(this.#task))) this.#setExpanded(false);
   }
 
   #indicator() {
@@ -149,6 +161,11 @@ export class TaskRow {
       tail.append(TaskRow.#el('span', 'pill-blocked', `Blocked by #${task.depId}`));
     }
     if (task.id !== null) tail.append(TaskRow.#el('span', 'task-id', `#${task.id}`));
+  }
+
+  // Stable across reloads: the id when the task has one, else its exact line.
+  static keyOf(task) {
+    return task.id !== null ? `id:${task.id}` : `raw:${task.raw}`;
   }
 
   // 'overdue' | 'soon' | 'later', or null when `due` isn't a YYYY-MM-DD date.

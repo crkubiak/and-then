@@ -13,7 +13,7 @@ export class ProjectSection {
 
   // `project` is null for Inbox. `tasks` is the section's roots and all descendants;
   // `roots` are the top-level tasks the tree renders from.
-  constructor({ project, accent, roots, tasks, taskList, palette, today }) {
+  constructor({ project, accent, roots, tasks, taskList, palette, today, collapsedKeys }) {
     this.#key = project ?? '';
     this.#section = document.createElement('section');
     this.#section.className = 'project-section';
@@ -21,7 +21,7 @@ export class ProjectSection {
 
     const bodyId = `project-body-${ProjectSection.#nextId++}`;
     this.#button = this.#buildHeader(project, tasks, bodyId);
-    this.#body = this.#buildBody(roots, taskList, palette, today, bodyId);
+    this.#body = this.#buildBody(roots, taskList, palette, today, bodyId, collapsedKeys);
     this.#section.append(this.#button, this.#body);
 
     this.#button.addEventListener('click', () => this.setCollapsed(!this.isCollapsed));
@@ -55,6 +55,7 @@ export class ProjectSection {
     button.type = 'button';
     button.className = 'project-header';
     button.setAttribute('aria-controls', bodyId);
+    button.dataset.key = `section:${this.#key}`; // lets App restore focus after a re-render
 
     const chevron = this.#el('span', 'chevron', '▸');
     chevron.setAttribute('aria-hidden', 'true');
@@ -84,11 +85,11 @@ export class ProjectSection {
     return bar;
   }
 
-  #buildBody(roots, taskList, palette, today, bodyId) {
+  #buildBody(roots, taskList, palette, today, bodyId, collapsedKeys) {
     const body = this.#el('div', 'project-body');
     body.id = bodyId;
     for (const task of SortOrder.sort(roots)) {
-      body.append(new TaskRow({ task, taskList, palette, today }).element);
+      body.append(new TaskRow({ task, taskList, palette, today, collapsedKeys }).element);
     }
     return body;
   }

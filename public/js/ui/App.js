@@ -1,4 +1,5 @@
 import { FileStore } from '../io/FileStore.js';
+import { LiveSync } from '../io/LiveSync.js';
 import { TaskList } from '../model/TaskList.js';
 import { ProjectPalette } from './ProjectPalette.js';
 import { ProjectSection } from './ProjectSection.js';
@@ -8,6 +9,11 @@ export class App {
   #root;
   #store;
   #taskList = null;
+  #collapsedKeys = new Set(); // collapsed task rows, session-only (see TaskRow.keyOf)
+  #status = 'reconnecting';
+  #dot = null;
+  #reloading = false;
+  #reloadAgain = false;
 
   constructor(root, { store = new FileStore() } = {}) {
     this.#root = root;
@@ -27,13 +33,80 @@ export class App {
       this.setTaskList(new TaskList(files));
     } catch (err) {
       this.#renderError(err);
+      return;
     }
+    new LiveSync({
+      onVersion: (version) => this.#onVersion(version),
+      onStatus: (status) => this.#setStatus(status),
+    });
+  }
+
+  #onVersion(version) {
+    if (version === this.#store.version) return;
+    if (this.#reloading) {
+      this.#reloadAgain = true; // run exactly one more reload when this one finishes
+      return;
+    }
+    this.#reload();
+  }
+
+  async #reload() {
+    this.#reloading = true;
+    try {
+      do {
+        this.#reloadAgain = false;
+        try {
+          // Phase 8: skip or defer this re-render while an inline editor is open.
+          this.setTaskList(new TaskList(await this.#store.load()));
+        } catch (err) {
+          this.#showReloadError(err); // keep the current view
+        }
+      } while (this.#reloadAgain);
+    } finally {
+      this.#reloading = false;
+    }
+  }
+
+  #showReloadError(err) {
+    const main = this.#root.querySelector('.app-main');
+    if (!main) return this.#renderError(err);
+    main.querySelector('.error-badge')?.remove();
+    main.prepend(this.#errorBadge(err));
+  }
+
+  #setStatus(status) {
+    this.#status = status;
+    this.#applyStatus();
+  }
+
+  #applyStatus() {
+    if (!this.#dot) return;
+    const label = this.#status === 'live' ? 'Live' : 'Reconnecting';
+    this.#dot.className = `live-dot is-${this.#status}`;
+    this.#dot.title = label;
+    this.#dot.setAttribute('aria-label', label);
   }
 
   // All rendering goes through here (initial load, live reload, actions).
   setTaskList(taskList) {
     this.#taskList = taskList;
+    const scrollY = window.scrollY;
+    const focusKey = this.#focusedKey();
     this.#render();
+    window.scrollTo(0, scrollY);
+    this.#restoreFocus(focusKey);
+  }
+
+  // Only section headers and row toggles carry a data-key.
+  #focusedKey() {
+    const active = document.activeElement;
+    return active && this.#root.contains(active) ? (active.dataset?.key ?? null) : null;
+  }
+
+  #restoreFocus(key) {
+    if (key === null) return;
+    const el = [...this.#root.querySelectorAll('[data-key]')].find((e) => e.dataset.key === key);
+    el?.focus({ preventScroll: true });
   }
 
   #render() {
@@ -46,13 +119,18 @@ export class App {
   #renderShell(summary = null) {
     const header = document.createElement('header');
     header.className = 'app-header';
+    const titleRow = this.#el('div', 'title-row');
     const title = document.createElement('h1');
     title.textContent = 'TaskFlow';
+    this.#dot = document.createElement('span');
+    this.#dot.setAttribute('role', 'img');
+    this.#applyStatus();
+    titleRow.append(title, this.#dot);
     const strip = document.createElement('div');
     strip.className = 'accent-strip';
     strip.setAttribute('aria-hidden', 'true');
     for (let i = 0; i < 4; i++) strip.append(document.createElement('span'));
-    header.append(title);
+    header.append(titleRow);
     if (summary) header.append(summary);
     header.append(strip);
 
@@ -109,6 +187,7 @@ export class App {
         taskList: this.#taskList,
         palette,
         today,
+        collapsedKeys: this.#collapsedKeys,
       });
       main.append(section.element);
     }
@@ -131,10 +210,12 @@ export class App {
 
   #renderError(err) {
     const main = this.#renderShell();
-    const badge = document.createElement('p');
-    badge.className = 'error-badge';
+    main.append(this.#errorBadge(err));
+  }
+
+  #errorBadge(err) {
+    const badge = this.#el('p', 'error-badge', `Could not load tasks: ${err.message}`);
     badge.setAttribute('role', 'alert');
-    badge.textContent = `Could not load tasks: ${err.message}`;
-    main.append(badge);
+    return badge;
   }
 }
