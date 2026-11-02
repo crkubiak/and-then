@@ -13,4 +13,5 @@ todo.txt:15  error    dep:15 is part of a dependency cycle
 todo.txt:16  error    dep:98 does not match any task
 todo.txt:18  error    subtask project +Alpha differs from root project +Beta
 todo.txt:19  warning  completed parent has 1 open subtask
-12 errors, 3 warnings
+todo.txt:21  warning  line has no description
+12 errors, 4 warnings

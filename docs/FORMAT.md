@@ -91,6 +91,7 @@ Order matters. First append the lines to `done.txt`, unchanged and in their orig
 | `bad-date` | error | Use a real `YYYY-MM-DD` date (also checks `due:`). |
 | `loose-date` | warning | A leading date like `2026-1-5` is not read as a date. Rewrite it as `YYYY-MM-DD`. |
 | `missing-completion-date` | warning | Add the completion date after `x`. |
+| `no-description` | warning | The line is only tags, projects and contexts. Add the task text, or delete the line. Applies to open and completed lines in both files. |
 | `parent-missing` | error | Point at an existing ID or remove `parent:`. |
 | `parent-archived` | error | The parent is in `done.txt`. Remove `parent:` or reopen the parent. |
 | `parent-cycle` | error | Remove `parent:` from one task in the loop. |

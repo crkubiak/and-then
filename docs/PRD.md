@@ -292,7 +292,7 @@ todo.txt:31  warning  completed parent has 2 open subtasks
 - It uses the same validator class as the UI Problems panel.
 - `docs/FORMAT.md` instructs the agent to run it after every edit.
 
-**Checks:** duplicate keys, duplicate IDs, a second `parent:`, unresolved `parent:` / `dep:`, cycles, subtask project mismatch, completed parent with open descendants, malformed dates.
+**Checks:** duplicate keys, duplicate IDs, a second `parent:`, unresolved `parent:` / `dep:`, cycles, subtask project mismatch, completed parent with open descendants, malformed dates, a line with no description (any line in either file).
 
 ---
 

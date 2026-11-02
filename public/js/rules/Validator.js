@@ -39,6 +39,7 @@ export class Validator {
         add(task, 'error', 'bad-date', `${shown} is not a valid YYYY-MM-DD date`);
       }
     }
+    if (task.description === '') add(task, 'warning', 'no-description', 'line has no description');
     // A leading date the parser couldn't read silently becomes description text.
     const loose = task.creationDate === null && LOOSE_DATE.exec(task.body);
     if (loose) {
