@@ -748,6 +748,32 @@ button.task-check:hover {
   cursor: pointer;
 }
 
+/* New-task marker: a yellow fill dot (never text) and bold description. Cleared in place when seen. */
+.new-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-2);
+  border-radius: 50%;
+  background: var(--yellow);
+  vertical-align: middle;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.task-row.is-new .task-text {
+  font-weight: 700;
+}
+
 .task-text.is-empty {
   color: var(--fg-muted);
   font-style: italic;

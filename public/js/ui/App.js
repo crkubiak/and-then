@@ -1,5 +1,6 @@
 import { FileStore } from '../io/FileStore.js';
 import { LiveSync } from '../io/LiveSync.js';
+import { SeenStore } from '../io/SeenStore.js';
 import { TaskList } from '../model/TaskList.js';
 import { IdAllocator } from '../model/IdAllocator.js';
 import { TaskParser } from '../model/TaskParser.js';
@@ -60,6 +61,9 @@ export class App {
   #editorView = null;
   #subtaskBusy = false; // an Enter in the new-subtask input is still saving
   #deferred = false; // a newer list was loaded while editing; the page shows an older one
+  #seen = new SeenStore();
+  #entries = new Map(); // todo.txt task key to raw line, rebuilt each render
+  #newKeys = new Set(); // keys of tasks not yet seen, rebuilt each render and shrunk by #markSeen
   #sections = new Map(); // project (null = Inbox) to its ProjectSection, rebuilt each render
 
   constructor(root, { store = new FileStore() } = {}) {
@@ -157,6 +161,7 @@ export class App {
         }
         const result = await this.#store.save(next.toText());
         if (result.ok) {
+          this.#markOwn(list, next);
           onSaved?.();
           this.setTaskList(next);
           return true;
@@ -171,6 +176,32 @@ export class App {
       this.toast.error(`Could not save: ${err.message}`);
       if (list !== this.#taskList) this.#present(list); // a 409 already showed us newer content
       return false;
+    }
+  }
+
+  // Our own saves are never new: every task the save added or changed counts as seen.
+  #markOwn(before, after) {
+    const old = App.#entriesOf(before);
+    const own = new Map([...App.#entriesOf(after)].filter(([key, raw]) => old.get(key) !== raw));
+    this.#seen.mark(own);
+  }
+
+  static #entriesOf(list) {
+    return new Map(list.todoTasks.map((task) => [TaskRow.keyOf(task), task.raw]));
+  }
+
+  // The one place a marker clears (click and focus now; the on-screen timer joins it in 11.4).
+  // Updates the rows in place, with no re-render.
+  #markSeen(keys) {
+    const fresh = [...keys].filter((key) => this.#newKeys.has(key));
+    if (fresh.length === 0) return;
+    this.#seen.mark(new Map(fresh.map((key) => [key, this.#entries.get(key)])));
+    const gone = new Set(fresh);
+    for (const key of fresh) this.#newKeys.delete(key);
+    for (const row of this.#root.querySelectorAll('.task-row')) {
+      if (!gone.has(row.dataset.taskKey)) continue;
+      row.classList.remove('is-new');
+      for (const mark of row.querySelectorAll('.new-mark')) mark.remove();
     }
   }
 
@@ -576,6 +607,9 @@ export class App {
   }
 
   #render() {
+    this.#entries = App.#entriesOf(this.#taskList);
+    this.#seen.sync(this.#entries);
+    this.#newKeys = new Set([...this.#entries.keys()].filter((key) => this.#seen.isNew(key)));
     this.#validate();
     this.#toolbar.setSweep(SweepRules.eligible(this.#taskList, App.today()).length);
     const empty = this.#taskList.todoTasks.length === 0;
@@ -670,6 +704,7 @@ export class App {
         hideCompleted: this.#toolbar.hideCompleted,
         isVisible: (task) => this.#isVisible(task),
         problems: this.#problemsByTask,
+        newKeys: this.#newKeys,
         actions: {
           complete: (task) => this.#complete(task),
           reopen: (task) => this.#reopen(task),
@@ -678,6 +713,7 @@ export class App {
           clearNeeds: (task) => this.#clearNeeds(task),
           addSubtask: (task) => this.#openSubtask(task),
           edit: (task) => this.#startEdit(task),
+          seen: (task) => this.#markSeen([TaskRow.keyOf(task)]),
         },
       });
       this.#sections.set(project, section);
