@@ -1,0 +1,33 @@
+(A) 2026-10-20 Plan data center rack upgrade +Infra id:1 due:2026-11-20
+(A) 2026-10-20 Get vendor quotes parent:1 @phone id:2 due:2026-10-28
+2026-10-21 Compare quotes in a spreadsheet parent:2 @laptop id:3
+x 2026-10-25 2026-10-21 Request quotes from three vendors +Infra parent:2 id:4
+(B) 2026-10-22 Order rack hardware parent:1 id:5 dep:2 due:2026-11-12
+2026-10-22 Schedule downtime window parent:1 id:6 dep:4
+(C) 2026-10-24 Update runbook after upgrade +Infra @office id:7 dep:50
+2026-10-26 Renew TLS certificates +Infra @laptop id:8 due:2026-10-31
+
+(B) 2026-10-18 Set up home office +Home_Office id:9
+2026-10-18 Buy standing desk parent:9 @errands id:10 due:2026-11-08
+2026-10-19 Fix cable management parent:9 id:11
+x 2026-10-30 2026-10-19 Order monitor arm +Home_Office parent:9 id:12
+2026-10-27 Replace desk lamp +Home_Office @errands due:2026-11-05
+(C) 2026-10-28 Declutter bookshelf +Home_Office @home
+(A) 2026-10-15 Launch new pricing page +Website id:15 due:2026-11-06
+2026-10-15 Write pricing copy parent:15 @laptop id:16
+(B) 2026-10-16 Design pricing table parent:16 id:17
+x 2026-10-29 2026-10-16 Review analytics requirements parent:15 id:18
+2026-10-17 Set up redirect for the old pricing URL parent:15 id:19
+2026-10-30 Audit page load speed +Website @laptop due:2026-12-01
+(B) 2026-11-01 Call dentist @phone due:2026-11-03
+2026-11-01 Buy birthday gift @errands
+Read the migration guide
+2026-10-29 Reply to conference invite @laptop due:2026-10-30
+x 2026-09-20 2026-09-05 Migrate wiki +Infra id:25
+x 2026-09-18 2026-09-05 Export old wiki pages parent:25 id:26
+x 2026-09-19 2026-09-06 Set up redirects for old wiki URLs parent:26 id:27
+x 2026-10-28 2026-10-20 Refresh brand assets +Website id:28
+x 2026-10-27 2026-10-21 Update logo files parent:28 id:29
+x 2026-09-15 2026-09-01 Provision staging server +Infra id:30
+(B) 2026-10-10 Deploy release to staging +Infra id:31 dep:30
+x 2026-08-30 2026-08-20 Sign vendor NDA +Infra id:32
