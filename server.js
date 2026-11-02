@@ -19,6 +19,7 @@ const MIME = {
 const MAX_BODY = 5 * 1024 * 1024; // 5 MB cap on PUT bodies
 const FILES = ['todo.txt', 'done.txt']; // the only files the API ever touches
 const DEBOUNCE_MS = 100; // collapse a burst of fs events into one check
+const HEARTBEAT_MS = 25000; // SSE comment to keep idle connections open through proxies
 
 // An error that maps straight to an HTTP status.
 class HttpError extends Error {
@@ -39,6 +40,8 @@ class Server {
     this.watcher = null;
     this.debounceTimer = null;
     this.retried = false;
+    this.clients = new Set(); // open SSE responses
+    this.heartbeat = null;
     this.http = http.createServer((req, res) => this.handle(req, res));
   }
 
@@ -121,12 +124,55 @@ class Server {
     // Reject foreign Host headers to block DNS rebinding from other sites.
     const allowedHosts = [`127.0.0.1:${this.port}`, `localhost:${this.port}`];
     if (!allowedHosts.includes(req.headers.host)) throw new HttpError(403, 'Forbidden host');
+    if (pathname === '/api/events') return this.handleEvents(req, res);
     if (pathname !== '/api/files') throw new HttpError(404, 'Not Found');
     // GET leaves lastVersion alone so an external edit is still announced to other tabs.
     if (req.method === 'GET') return this.sendJson(res, 200, await this.readFiles());
     if (req.method === 'PUT') return this.putFiles(req, res);
     res.setHeader('Allow', 'GET, PUT');
     throw new HttpError(405, 'Method Not Allowed');
+  }
+
+  // Server-Sent Events stream: pushes `changed` when the files change outside this server.
+  async handleEvents(req, res) {
+    if (req.method !== 'GET') {
+      res.setHeader('Allow', 'GET');
+      throw new HttpError(405, 'Method Not Allowed');
+    }
+    const { version } = await this.readFiles();
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-store',
+      Connection: 'keep-alive',
+    });
+    res.write(`retry: 2000\nevent: hello\ndata: ${JSON.stringify({ version })}\n\n`);
+    this.clients.add(res);
+    this.startHeartbeat();
+    res.on('close', () => {
+      this.clients.delete(res);
+      if (this.clients.size === 0) this.stopHeartbeat();
+    });
+    res.on('error', () => {}); // a dead socket is cleaned up by 'close'
+  }
+
+  // Write to every client; a failure on one never affects the rest.
+  broadcast(text) {
+    for (const res of this.clients) {
+      try {
+        res.write(text);
+      } catch {
+        this.clients.delete(res);
+      }
+    }
+  }
+
+  startHeartbeat() {
+    this.heartbeat ??= setInterval(() => this.broadcast(': ping\n\n'), HEARTBEAT_MS);
+  }
+
+  stopHeartbeat() {
+    clearInterval(this.heartbeat);
+    this.heartbeat = null;
   }
 
   // Paths are built only from the fixed FILES names, never from the request.
@@ -262,5 +308,7 @@ const server = new Server({
   port: Number(process.env.PORT) || 3000,
   dataDir: path.resolve(ROOT, dataDirArg ?? 'data'),
 });
-server.onChange.add(({ version }) => console.log('files changed', version)); // 7.2 replaces this
+server.onChange.add(({ version }) => {
+  server.broadcast(`event: changed\ndata: ${JSON.stringify({ version })}\n\n`);
+});
 server.start();

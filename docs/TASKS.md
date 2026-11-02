@@ -60,7 +60,7 @@ Ordered so each phase can be run and checked before the next one starts. Section
 ## Phase 7: Live sync (§7.1, §7.2)
 
 - [x] 7.1 Server: watch the data directory, debounce, and suppress echoes of the app's own writes
-- [ ] 7.2 Server: `GET /api/events` SSE stream
+- [x] 7.2 Server: `GET /api/events` SSE stream
 - [ ] 7.3 Client: reload on `changed` while keeping collapse state, scroll position, and any open edit
 
 **Check:** editing `todo.txt` in a text editor updates the page within about a second.
