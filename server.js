@@ -198,6 +198,10 @@ class Server {
     this.putQueue = run.catch(() => {});
     const { status, payload } = await run;
     this.sendJson(res, status, payload);
+    // Tell every tab, after the saving tab has its response. The saving tab already holds this
+    // version and ignores the event; the other tabs reload. The watcher stays quiet for our own
+    // writes (lastVersion), so without this broadcast no other tab would ever hear about a save.
+    if (status === 200) this.broadcast(`event: changed\ndata: ${JSON.stringify({ version: payload.version })}\n\n`);
   }
 
   async applyPut({ todo, done, version }) {
@@ -207,7 +211,7 @@ class Server {
     await this.writeAtomic('done.txt', done);
     await this.writeAtomic('todo.txt', todo);
     const next = this.hash(todo, done);
-    this.lastVersion = next; // the watcher's check will see this and stay quiet
+    this.lastVersion = next; // the watcher's check will see this and stay quiet; putFiles broadcasts instead
     return { status: 200, payload: { version: next } };
   }
 
