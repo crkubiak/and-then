@@ -466,8 +466,9 @@ button.problem-item:hover {
 /* Toasts */
 .toast-region {
   position: fixed;
-  left: var(--space-4);
-  bottom: var(--space-4);
+  top: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -898,6 +899,18 @@ button.task-check:hover {
     flex: 0 0 100%;
     margin-left: 0;
     padding: 0 0 var(--space-1) calc(var(--toggle) + 18px + var(--space-2) * 2);
+  }
+
+  /* Smaller toasts on a phone so a long message doesn't cover several rows. */
+  .toast-region {
+    top: var(--space-2);
+    max-width: calc(100vw - 2 * var(--space-2));
+  }
+
+  .toast {
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.8125rem;
+    line-height: 1.35;
   }
 }
 

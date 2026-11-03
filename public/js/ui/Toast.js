@@ -1,4 +1,4 @@
-// Transient bottom-left messages. The region lives outside App's #root so
+// Transient top-center messages. The region lives outside App's #root so
 // re-renders never remove it.
 export class Toast {
   static #INFO_MS = 4000;
