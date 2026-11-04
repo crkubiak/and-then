@@ -180,3 +180,36 @@ Setup: `cp -R samples/demo /tmp/demo-ui && PORT=3300 node server.js /tmp/demo-ui
 17. **Age.** Open rows show a muted age (`3D`, `1M`) left of the author badge; hovering shows "Created YYYY-MM-DD". Completed rows show none.
 18. **New and edited markers.** Load the page once (baseline). Append an id'd line to the file: it appears with a yellow dot and bold text. Change another id'd line's `due:` in the file: that row gets a hollow teal ring, and hovering the ring or the text shows "Edited: due … → …". Both stay until the pointer moves over the row (or you click or focus it), then fade out. Neither clears on its own, however long the tab is in front. Hovering a subtask leaves its parent's marker alone.
 19. **Rollup and seen rules.** Collapse a parent, then append a child of it to the file: the parent shows "+1 new" next to its counter, and a collapsed section header shows the same. The marker stays while collapsed, in a background tab, and while you hover the collapsed parent itself. Expand: nothing clears yet. Move the pointer over the new child: its dot fades, the pill disappears (or shrinks if more are marked), and the page does not jump or lose focus.
+
+### Browser pass results
+
+Run on 2026-11-03 against scratch copies of `samples/demo` and `samples/problems`, in Chrome with DevTools device emulation for 375 px. Results are the tester's observations, not scripted checks.
+
+| Step | Result | Notes |
+|---|---|---|
+| 1 Hover visibility | Pass | |
+| 2 Phone width | Pass | Checklist text was wrong: the checkbox (`.task-check`) is 18 × 18 at every width, and the task-row toggle is 32 × 30. The section header toggle is covered because the whole header is one clickable button. |
+| 3 Focus ring | Pass | |
+| 4 Lock and highlight | Pass | |
+| 5 Blocked-by pill | Pass | Needed an extra scratch task (`dep:2` in Inbox) to test the cross-section reopen: with the pill and its target under the same parent, collapsing the section hides the pill. Reduced-motion check skipped. |
+| 6 Override dialog | Pass | |
+| 7 Raw drawer | Pass | |
+| 8 Toasts | Pass | Toast was bottom-left. Moved to top-center (11.15). The five-toast cap was confirmed in step 10. |
+| 9 Live reload | Pass | |
+| 10 Inline edit | Pass | |
+| 11 Add input and + Subtask | Pass | File content checked: parent got `id:52`, child got `+Home_Office parent:52` and `by:me`. |
+| 12 Problems panel | Pass | 21 problems (14 errors, 7 warnings). |
+| 13 Hide Completed and collapse persistence | Pass | |
+| 14 Colors | Pass | Later due dates were plain green text. Now a green badge (11.16). |
+| 15 Two tabs | **Fail, then pass** | A save from the app never reached other tabs, because the server set `lastVersion` on its own writes and so sent no `changed` event. Fixed in 11.17, with tests in `test/live-sync.test.js`. Re-run: passes, and the saving tab does not re-render. |
+| 16 Tags | Pass | |
+| 17 Age | Pass | |
+| 18 New and edited markers | Pass | Markers faded on a timer. Now they clear on mouseover (11.18). Re-checked after the change. |
+| 19 Rollup and seen rules | Pass | Re-checked after 11.18. |
+
+Observations from the pass:
+
+- **Id-less tasks show as new when they change.** The marker key is `id:`, else the exact line, so completing or editing a task with no `id:` looks like a new task (yellow dot) in another tab, not an edit (teal ring). This is as written in PRD §5 and was left as is. Keying on `uid:` first would fix it.
+- **Sweep reads the completion date only.** Backdating the creation or due date does not enable it. Ticking a checkbox stamps today's date as the completion date, so testing Sweep means editing the first date after the `x`.
+- **A root task may add a second `+project`.** It shows as a badge and the root stays in its primary project's section. Only a different primary project on a subtask is rejected.
+- **Identical errors stack.** Five repeated errors show as five toasts. Collapsing repeats is not planned.
