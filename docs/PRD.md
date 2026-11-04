@@ -219,7 +219,7 @@ Minimal layout, generous color. Dark theme only, built on the gruvbox-baby dark 
 | Priority `(D)` to `(Z)` | teal badge |
 | Project sections | each project gets an accent from the rotation green, yellow, teal, red, assigned in order of first appearance; used for the header bar, the progress bar fill, and that project's badges elsewhere. Inbox uses `--fg-muted`. |
 | `@context` | teal badge |
-| Due date | overdue: red badge. Due within 3 days: yellow badge. Later: green text. |
+| Due date | overdue: red badge. Due within 3 days: yellow badge. Later: green badge. |
 | Blocked-by pill | yellow outline |
 | Validation error / warning badge | red / yellow |
 | Completed task | `--fg-muted` text with strikethrough and a green check |
