@@ -1,6 +1,7 @@
 import { ProjectPalette } from './ProjectPalette.js';
 import { Age } from '../rules/Age.js';
 import { CompletionRules } from '../rules/CompletionRules.js';
+import { HeadingRules } from '../rules/HeadingRules.js';
 import { SortOrder } from '../rules/SortOrder.js';
 import { VisibilityRules } from '../rules/VisibilityRules.js';
 
@@ -109,6 +110,7 @@ export class TaskRow {
     const label = empty ? '(no description)' : text;
     if (this.#task.file !== 'todo') return TaskRow.#el('span', empty ? 'task-text is-empty' : 'task-text', label);
     const button = TaskRow.#el('button', empty ? 'task-text task-text-edit is-empty' : 'task-text task-text-edit', label);
+    if (HeadingRules.isBacklogHeading(text)) button.classList.add('task-heading'); // bold uppercase on a teal fill
     button.type = 'button';
     const edited = this.#editedKeys.get(TaskRow.keyOf(this.#task));
     button.title = edited ? `Edit task. ${edited}` : 'Edit task'; // App resets it when the marker clears

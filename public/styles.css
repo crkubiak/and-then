@@ -853,6 +853,18 @@ button.task-check:hover {
   text-decoration: line-through;
 }
 
+/* A task whose text is only "Backlog" reads as a heading: bold, uppercase, on a teal fill (teal is
+   only ever a fill). Placed after the completed rule so a completed heading keeps readable text. */
+.task-text.task-heading {
+  padding: 0 var(--space-2);
+  background: var(--teal);
+  border-radius: var(--radius-badge);
+  color: var(--fg);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .task-tail {
   display: flex;
   align-items: center;
