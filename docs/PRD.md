@@ -265,6 +265,7 @@ The append happens before the removal so that a failure between the two steps du
 - `node server.js [dataDir]`. No dependencies. Binds to `127.0.0.1` only.
 - Serves the static app files and the two data files in `dataDir` (default `./data`). Creates them if missing.
 - Only the two fixed file paths are readable or writable.
+- **Logging:** one line per event on stdout (`<ISO time> <level> <event> key=value ...`), nothing else. Events: each API request (method, path, status, milliseconds), `save`, `conflict`, `external-change`, `sse-connect`, `sse-disconnect`, `listening` and errors. Static file requests log at `debug`. Task text is never logged, only line counts and the first 8 characters of a version. `LOG_LEVEL=debug|info|error`, default `info`.
 - **API:**
   - `GET /api/files` returns `{ todo, done, version }`.
   - `PUT /api/files` accepts `{ todo, done, version }`.
@@ -336,6 +337,7 @@ These are checked by hand for v1 and will become test cases when tests are added
 
 ```text
 server.js
+logger.js
 validate.js
 docs/       PRD.md, FORMAT.md, ACCEPTANCE.md, TASKS.md (pointer)
 public/

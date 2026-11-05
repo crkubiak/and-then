@@ -3,6 +3,7 @@ import { watch as fsWatch } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { Logger, countLines } from './logger.js';
 
 const ROOT = import.meta.dirname;
 
@@ -30,7 +31,8 @@ class HttpError extends Error {
 }
 
 class Server {
-  constructor({ port = 3000, dataDir = path.join(ROOT, 'data') } = {}) {
+  constructor({ port = 3000, dataDir = path.join(ROOT, 'data'), logger = new Logger() } = {}) {
+    this.logger = logger;
     this.port = port;
     this.dataDir = dataDir;
     this.putQueue = Promise.resolve(); // serializes PUTs so the version check and write are atomic
@@ -50,7 +52,7 @@ class Server {
     this.lastVersion = (await this.readFiles()).version;
     this.watch();
     this.http.listen(this.port, '127.0.0.1', () => {
-      console.log(`Listening on http://127.0.0.1:${this.port}`);
+      this.logger.info('listening', { url: `http://127.0.0.1:${this.port}`, data: this.dataDir });
     });
   }
 
@@ -68,9 +70,9 @@ class Server {
       this.watcher = fsWatch(this.dataDir, (_event, filename) => {
         if (filename == null || FILES.includes(String(filename))) this.schedule();
       });
-      this.watcher.on('error', (err) => console.error('watcher error:', err));
+      this.watcher.on('error', (err) => this.logger.error('watcher-error', errorFields(err)));
     } catch (err) {
-      console.error('watcher failed to start:', err);
+      this.logger.error('watcher-failed', errorFields(err));
     }
   }
 
@@ -81,9 +83,9 @@ class Server {
 
   // Notify only when content differs from what this server last announced or wrote.
   async check() {
-    let version;
+    let current;
     try {
-      ({ version } = await this.readFiles());
+      current = await this.readFiles();
       this.retried = false;
     } catch (err) {
       // A file may be briefly missing mid-replace: retry once on the next debounce.
@@ -92,16 +94,35 @@ class Server {
         this.schedule();
       } else {
         this.retried = false;
-        console.error('watch read failed:', err);
+        this.logger.error('watch-read-failed', errorFields(err));
       }
       return;
     }
+    const { version } = current;
     if (version === this.lastVersion) return;
     this.lastVersion = version;
+    this.logger.info('external-change', {
+      version: shortVersion(version),
+      todoLines: countLines(current.todo),
+      doneLines: countLines(current.done),
+    });
     for (const fn of this.onChange) fn({ version });
   }
 
+  // One request line when the response closes, so an SSE stream is logged with its full duration.
+  // The query string is left out. Static files log at debug so page loads do not bury the API lines.
+  logRequest(req, res, startedAt) {
+    res.on('close', () => {
+      const pathname = req.url.split(/[?#]/)[0];
+      const fields = { method: req.method, path: pathname, status: res.statusCode, ms: Math.round(performance.now() - startedAt) };
+      if (res.statusCode >= 500) this.logger.error('request', fields);
+      else if (pathnameIsApi(req.url)) this.logger.info('request', fields);
+      else this.logger.debug('request', fields);
+    });
+  }
+
   async handle(req, res) {
+    this.logRequest(req, res, performance.now());
     try {
       const pathname = req.url.split(/[?#]/)[0];
       if (pathname === '/api' || pathname.startsWith('/api/')) {
@@ -114,7 +135,7 @@ class Server {
       if (pathnameIsApi(req.url) && err instanceof HttpError) {
         return this.sendJson(res, err.status, { error: err.message });
       }
-      console.error(err);
+      this.logger.error('unhandled-error', errorFields(err));
       if (pathnameIsApi(req.url)) return this.sendJson(res, 500, { error: 'Internal Server Error' });
       this.send(res, 500, 'Internal Server Error');
     }
@@ -148,8 +169,10 @@ class Server {
     res.write(`retry: 2000\nevent: hello\ndata: ${JSON.stringify({ version })}\n\n`);
     this.clients.add(res);
     this.startHeartbeat();
+    this.logger.info('sse-connect', { clients: this.clients.size });
     res.on('close', () => {
       this.clients.delete(res);
+      this.logger.info('sse-disconnect', { clients: this.clients.size });
       if (this.clients.size === 0) this.stopHeartbeat();
     });
     res.on('error', () => {}); // a dead socket is cleaned up by 'close'
@@ -206,12 +229,16 @@ class Server {
 
   async applyPut({ todo, done, version }) {
     const current = await this.readFiles();
-    if (version !== current.version) return { status: 409, payload: current };
+    if (version !== current.version) {
+      this.logger.info('conflict', { sent: shortVersion(version), current: shortVersion(current.version) });
+      return { status: 409, payload: current };
+    }
     // done.txt first: a failure in between duplicates lines rather than losing them.
     await this.writeAtomic('done.txt', done);
     await this.writeAtomic('todo.txt', todo);
     const next = this.hash(todo, done);
     this.lastVersion = next; // the watcher's check will see this and stay quiet; putFiles broadcasts instead
+    this.logger.info('save', { version: shortVersion(next), todoLines: countLines(todo), doneLines: countLines(done) });
     return { status: 200, payload: { version: next } };
   }
 
@@ -302,6 +329,16 @@ class Server {
   }
 }
 
+// The first 8 hex characters identify a version well enough to follow it across log lines.
+function shortVersion(version) {
+  return version.slice(0, 8);
+}
+
+// Error name, code and message only. Never the stack or the error object, which can carry file content.
+function errorFields(err) {
+  return { name: err?.name ?? 'Error', code: err?.code ?? '', message: err?.message ?? String(err) };
+}
+
 function pathnameIsApi(url) {
   const p = url.split(/[?#]/)[0];
   return p === '/api' || p.startsWith('/api/');
@@ -310,6 +347,7 @@ function pathnameIsApi(url) {
 const [, , dataDirArg] = process.argv;
 const server = new Server({
   port: Number(process.env.PORT) || 3000,
+  logger: new Logger({ level: process.env.LOG_LEVEL }),
   dataDir: dataDirArg ? path.resolve(dataDirArg) : path.join(ROOT, 'data'), // explicit folder is relative to the cwd
 });
 server.onChange.add(({ version }) => {
