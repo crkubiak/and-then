@@ -1,10 +1,12 @@
 import { FileStore } from '../io/FileStore.js';
 import { LiveSync } from '../io/LiveSync.js';
+import { CollapseStore } from '../io/CollapseStore.js';
 import { SeenStore } from '../io/SeenStore.js';
 import { TaskList } from '../model/TaskList.js';
 import { IdAllocator } from '../model/IdAllocator.js';
 import { TaskParser } from '../model/TaskParser.js';
 import { TaskSerializer } from '../model/TaskSerializer.js';
+import { CollapseRules } from '../rules/CollapseRules.js';
 import { CompletionRules } from '../rules/CompletionRules.js';
 import { ProjectPalette } from './ProjectPalette.js';
 import { ProjectSection } from './ProjectSection.js';
@@ -34,6 +36,8 @@ export class App {
   #store;
   #taskList = null;
   #collapsedKeys = new Set(); // collapsed task rows, session-only (see TaskRow.keyOf)
+  #collapseStore = new CollapseStore(); // the user's saved expand and collapse choices, per browser
+  #defaultCollapseEvaluated = new Set(); // parent keys whose starting state was already decided this session
   #needsIndex = -1; // cursor for the "N need you" jump
   #needsKeys = '';
   #status = 'reconnecting';
@@ -475,11 +479,14 @@ export class App {
   #setAllExpanded(expanded) {
     for (const section of this.#sections.values()) section.setCollapsed(!expanded);
     this.#collapsedKeys.clear();
-    if (!expanded) {
-      for (const task of this.#taskList.todoTasks) {
-        if (this.#taskList.children(task).length > 0) this.#collapsedKeys.add(TaskRow.keyOf(task));
-      }
+    const choices = new Map();
+    for (const task of this.#taskList.todoTasks) {
+      if (this.#taskList.children(task).length === 0) continue;
+      const key = TaskRow.keyOf(task);
+      if (!expanded) this.#collapsedKeys.add(key);
+      choices.set(key, !expanded);
     }
+    this.#collapseStore.record(choices); // pressing Expand All or Collapse All is a choice too
     this.setTaskList(this.#taskList);
   }
 
@@ -646,7 +653,30 @@ export class App {
     return edited !== null && (edited === task || this.#taskList.ancestors(edited).includes(task));
   }
 
+  // PRD §5.3: where a parent row starts. The user's saved choice wins, whichever way it went. With no
+  // saved choice, a completed parent starts collapsed. This is decided once per parent key, the first
+  // render that sees the key with subtasks (page load, or a parent that arrives later), so completing
+  // a task in this tab never folds it away. Parent keys are `id:` keys, which are stable.
+  #applyDefaultCollapse() {
+    this.#collapseStore.prune(new Set(this.#taskList.todoTasks.map((task) => TaskRow.keyOf(task))));
+    for (const task of this.#taskList.todoTasks) {
+      if (this.#taskList.children(task).length === 0) continue;
+      const key = TaskRow.keyOf(task);
+      if (this.#defaultCollapseEvaluated.has(key)) continue;
+      this.#defaultCollapseEvaluated.add(key);
+      if (CollapseRules.initiallyCollapsed(this.#taskList, task, this.#collapseStore.choiceFor(key))) {
+        this.#collapsedKeys.add(key);
+      }
+    }
+  }
+
+  // The user toggled a parent row: remember the choice across reloads.
+  #recordCollapseChoice(task, collapsed) {
+    this.#collapseStore.record(new Map([[TaskRow.keyOf(task), collapsed]]));
+  }
+
   #render() {
+    this.#applyDefaultCollapse();
     this.#entries = App.#entriesOf(this.#taskList);
     this.#seen.sync(this.#entries);
     this.#newKeys = new Set([...this.#entries.keys()].filter((key) => this.#seen.isNew(key)));
@@ -760,6 +790,7 @@ export class App {
           addSubtask: (task) => this.#openSubtask(task),
           edit: (task) => this.#startEdit(task),
           seen: (task) => this.#markSeen([TaskRow.keyOf(task)]),
+          collapseToggled: (task, collapsed) => this.#recordCollapseChoice(task, collapsed),
         },
       });
       this.#sections.set(project, section);

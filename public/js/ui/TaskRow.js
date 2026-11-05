@@ -143,6 +143,7 @@ export class TaskRow {
     const key = TaskRow.keyOf(this.#task);
     if (expanded) this.#collapsedKeys.delete(key);
     else this.#collapsedKeys.add(key);
+    this.#actions.collapseToggled?.(this.#task, !expanded); // the user's own choice, so App saves it
   }
 
   // Children left after Hide Completed (all of them when it is off).
