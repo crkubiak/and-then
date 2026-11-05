@@ -6,6 +6,7 @@ export class Toast {
   static #MAX_VISIBLE = 5;
 
   #region;
+  #live = new Map(); // "kind\nmessage" to { toast, repeat } for the toast showing it
 
   constructor(parent = document.body) {
     this.#region = document.createElement('div');
@@ -24,8 +25,17 @@ export class Toast {
   }
 
   show(message, kind = 'info') {
+    const type = kind === 'error' ? 'error' : 'info';
+    // The same message and kind as a toast still on screen: count it, do not stack another.
+    const id = `${type}\n${message}`;
+    const showing = this.#live.get(id);
+    if (showing?.toast.isConnected) {
+      showing.repeat();
+      return;
+    }
+
     const toast = document.createElement('div');
-    toast.className = `toast toast-${kind === 'error' ? 'error' : 'info'}`;
+    toast.className = `toast toast-${type}`;
     const text = document.createElement('span');
     text.className = 'toast-text';
     text.textContent = message;
@@ -37,7 +47,8 @@ export class Toast {
 
     // The timer pauses while the pointer is over the toast or focus is inside it,
     // then resumes with the time that was left.
-    let remaining = kind === 'error' ? Toast.#ERROR_MS : Toast.#INFO_MS;
+    const duration = type === 'error' ? Toast.#ERROR_MS : Toast.#INFO_MS;
+    let remaining = duration;
     let timer = null;
     let startedAt = 0;
     let hovered = false;
@@ -45,6 +56,7 @@ export class Toast {
     const dismiss = () => {
       clearTimeout(timer);
       toast.remove();
+      if (this.#live.get(id)?.toast === toast) this.#live.delete(id);
     };
     const resume = () => {
       if (hovered || focused || timer !== null) return;
@@ -63,6 +75,25 @@ export class Toast {
       if (hovered || focused) pause();
       else resume();
     };
+    // A repeat shows a count and restarts the full timer. While the pointer or focus is on the
+    // toast the timer stays paused, and the full time starts when it leaves.
+    let count = 1;
+    let badge = null;
+    const repeat = () => {
+      count += 1;
+      if (badge === null) {
+        badge = document.createElement('span');
+        badge.className = 'toast-count';
+        text.after(badge);
+      }
+      badge.textContent = `×${count}`;
+      badge.title = `Shown ${count} times`;
+      clearTimeout(timer);
+      timer = null;
+      remaining = duration;
+      resume();
+    };
+    this.#live.set(id, { toast, repeat });
     toast.addEventListener('mouseenter', () => hold(true, true));
     toast.addEventListener('mouseleave', () => hold(true, false));
     toast.addEventListener('focusin', () => hold(false, true));

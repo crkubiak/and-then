@@ -499,6 +499,19 @@ button.problem-item:hover {
   flex: 1;
 }
 
+/* Shown after the message when the same toast repeats: "×3". */
+.toast-count {
+  flex: none;
+  align-self: center;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-badge);
+  background: var(--bg-deep);
+  color: var(--fg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 .toast-close {
   flex: none;
   min-width: var(--toggle);

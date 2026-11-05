@@ -168,9 +168,9 @@ Setup: `cp -R samples/demo /tmp/demo-ui && PORT=3300 node server.js /tmp/demo-ui
 5. **Blocked-by pill.** Click "Blocked by #2" on "Order rack hardware". Page smooth-scrolls so "Get vendor quotes" is centred, it flashes, and its checkbox has focus. With OS "reduce motion" on it jumps instead. Collapse the Infra section first and repeat: it reopens.
 6. **Override dialog.** Click the checkbox on "Order rack hardware". Native confirm reads "#2 is not complete. Complete anyway?". Cancel changes nothing. OK writes `x ...` with `dep:2` kept.
 7. **Raw drawer.** Click Raw text. Drawer slides in, focus moves to the todo.txt textarea, Tab stays inside, Escape closes, focus returns to Raw text. At 375 px it fits the screen. Edit and Save re-renders.
-8. **Toasts.** Click Sweep. Toast "Swept 4 tasks to done.txt." appears top-center, disappears after about 4 s, and the x dismisses it. Trigger several errors (see step 10) and confirm at most 5 stack.
+8. **Toasts.** Click Sweep. Toast "Swept 4 tasks to done.txt." appears top-center, disappears after about 4 s, and the x dismisses it. Trigger five different errors (see step 10) and confirm they stack, and that a sixth different error leaves at most 5 on screen. Trigger the same error three times in a row: it shows one toast with a count (`×3`), not three toasts, and the 8 s timer restarts each time.
 9. **Live reload.** With the page open, append a line to `/tmp/demo-ui/todo.txt` in an editor. It appears within about a second. Scroll down, collapse a section, open an inline edit, then change the file again: scroll, collapse state and the open edit survive. Kill the server and watch the dot turn "Reconnecting", then restart and watch it return to "Live".
-10. **Inline edit.** Click "Fix cable management". Caret lands at the end, Enter saves, Escape cancels. Add `+Website` to a subtask of an Infra task: error toast, editor stays open.
+10. **Inline edit.** Click "Fix cable management". Caret lands at the end, Enter saves, Escape cancels. Add `+Website` to a subtask of an Infra task: error toast, editor stays open. Five different inline-edit errors to stack in step 8, each on an open task such as "Order rack hardware": append `+Website`; delete the creation date; change its `id:5` to another number; change its `by:` value; put `x 2026-11-04 ` at the start of the line. Pressing Enter on the same bad edit again repeats one error, which shows a count.
 11. **Add input and + Subtask.** Click + Subtask on "Replace desk lamp" (no id). A one-line input opens under the row, indented, and is focused. Type only a description, press Enter. The parent gets `id:52` and the new line has `+Home_Office parent:52`, the date and `by:me`, in one save. The input stays open and empty; Escape closes it.
 12. **Problems panel.** Run the server on a copy of `samples/problems`. Badge reads 21 problems, red. Open it, click "owner:" item: the page scrolls to that row and flashes it. Confirm the wrong-project child renders under "Beta root" with an Error badge.
 13. **Hide Completed and collapse persistence.** Tick Hide Completed, collapse a section, reload the page: both persist. Open a private window: neither is set.
@@ -194,7 +194,7 @@ Run on 2026-11-03 against scratch copies of `samples/demo` and `samples/problems
 | 5 Blocked-by pill | Pass | Needed an extra scratch task (`dep:2` in Inbox) to test the cross-section reopen: with the pill and its target under the same parent, collapsing the section hides the pill. Reduced-motion check skipped. |
 | 6 Override dialog | Pass | |
 | 7 Raw drawer | Pass | |
-| 8 Toasts | Pass | Toast was bottom-left. Moved to top-center (11.15). The five-toast cap was confirmed in step 10. |
+| 8 Toasts | Pass | Toast was bottom-left. Moved to top-center (11.15). The five-toast cap was confirmed in step 10, using five identical errors. Identical errors now show one toast with a count, so the step now uses five different errors. That wording is not re-run yet. |
 | 9 Live reload | Pass | |
 | 10 Inline edit | Pass | |
 | 11 Add input and + Subtask | Pass | File content checked: parent got `id:52`, child got `+Home_Office parent:52` and `by:me`. |
