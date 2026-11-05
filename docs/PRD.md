@@ -262,7 +262,7 @@ The append happens before the removal so that a failure between the two steps du
 
 ### 7.1 Local server
 
-- `node server.js [dataDir]`. No dependencies. Binds to `127.0.0.1` only.
+- `node server.js [dataDir]`. No dependencies. Binds to `127.0.0.1` only. The optional MCP server for agents (`mcp/`, see `docs/MCP.md`) is the only part that needs `npm install`.
 - Serves the static app files and the two data files in `dataDir` (default `./data`). Creates them if missing.
 - Only the two fixed file paths are readable or writable.
 - **Logging:** one line per event on stdout (`<ISO time> <level> <event> key=value ...`), nothing else. Events: each API request (method, path, status, milliseconds), `save`, `conflict`, `external-change`, `sse-connect`, `sse-disconnect`, `listening` and errors. Static file requests log at `debug`. Task text is never logged, only line counts and the first 8 characters of a version. `LOG_LEVEL=debug|info|error`, default `info`.
@@ -339,7 +339,7 @@ These are checked by hand for v1 and will become test cases when tests are added
 server.js
 logger.js
 validate.js
-docs/       PRD.md, FORMAT.md, ACCEPTANCE.md, TASKS.md (pointer)
+docs/       PRD.md, FORMAT.md, MCP.md, ACCEPTANCE.md, TASKS.md (pointer)
 public/
   index.html
   styles.css
@@ -350,6 +350,8 @@ public/
     io/         FileStore.js, LiveSync.js, SeenStore.js
     ui/         App.js, ProblemsPanel.js, ProjectPalette.js, ProjectSection.js, RawDrawer.js, TaskEditor.js, TaskInput.js, TaskRow.js, Toast.js, Toolbar.js
 samples/    demo/, problems/ (fixtures with todo.txt and done.txt)
-test/       live-sync.test.js (run with: node --test test/)
+mcp/        server.js (stdio MCP), client.js (HTTP client with 409 retry), operations.js (the edits)
+package.json, package-lock.json   the SDK dependency for mcp/ only
+test/       one file per area (run with: node --test test/)
 data/       the live data folder, todo.txt and done.txt (gitignored). Holds this project's own task tracking.
 ```
