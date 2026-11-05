@@ -8,16 +8,17 @@ An MCP server over stdio that lets an agent read and update the tasks in a runni
 
 Install once from the repo root: `npm install`. This adds `@modelcontextprotocol/sdk` and `zod`. The app itself (`node server.js`) still has no dependencies.
 
-| Setting | Default | Meaning |
+Both settings are optional. Register with just the command unless you need one.
+
+| Setting | Default | When to set it |
 | :--- | :--- | :--- |
-| `TASKFLOW_URL` | `http://127.0.0.1:3000` | Where the app is listening. Match the port you started it on. |
-| `TASKFLOW_AGENT` | none | Your name as `Model_version`, no spaces, e.g. `Opus_5.5`. Stamped as `by:` and `wip:`. A tool's `agent` argument overrides it. |
+| `TASKFLOW_URL` | `http://127.0.0.1:3000` | Only if the app runs on a different port. |
+| `TASKFLOW_AGENT` | none | Only if one model is the only thing that ever calls this. Each write tool takes an `agent` argument (`Model_version`, no spaces, e.g. `Opus_5.5`), so the agent names itself on every write and the stamp is always right. This setting is only a fallback, and a stale one stamps the wrong model on a `by:` tag that cannot be changed later. |
 
 ### In the `~/.claude-8l` profile
 
 ```
 CLAUDE_CONFIG_DIR=~/.claude-8l claude mcp add --scope user taskflow \
-  -e TASKFLOW_URL=http://127.0.0.1:3000 -e TASKFLOW_AGENT=Opus_5.5 \
   -- node /Users/charleskubiak/Repositories/todo-app/mcp/server.js
 ```
 
@@ -32,11 +33,7 @@ Put this in the root of the project whose agents should see the tasks:
   "mcpServers": {
     "taskflow": {
       "command": "node",
-      "args": ["/Users/charleskubiak/Repositories/todo-app/mcp/server.js"],
-      "env": {
-        "TASKFLOW_URL": "${TASKFLOW_URL:-http://127.0.0.1:3000}",
-        "TASKFLOW_AGENT": "Opus_5.5"
-      }
+      "args": ["/Users/charleskubiak/Repositories/todo-app/mcp/server.js"]
     }
   }
 }
