@@ -329,3 +329,25 @@ These are checked by hand for v1 and will become test cases when tests are added
 - Recurring tasks
 - Import/export and downloads
 - Keyboard shortcuts
+
+---
+
+## 11. File tree
+
+```text
+server.js
+validate.js
+docs/       PRD.md, FORMAT.md, ACCEPTANCE.md, TASKS.md (pointer)
+public/
+  index.html
+  styles.css
+  js/
+    main.js
+    model/      Task.js, TaskParser.js, TaskSerializer.js, TaskList.js, IdAllocator.js
+    rules/      Age.js, CompletionRules.js, EditRules.js, LineDiff.js, NewTaskRules.js, SortOrder.js, SweepRules.js, Validator.js, VisibilityRules.js
+    io/         FileStore.js, LiveSync.js, SeenStore.js
+    ui/         App.js, ProblemsPanel.js, ProjectPalette.js, ProjectSection.js, RawDrawer.js, TaskEditor.js, TaskInput.js, TaskRow.js, Toast.js, Toolbar.js
+samples/    demo/, problems/ (fixtures with todo.txt and done.txt)
+test/       live-sync.test.js (run with: node --test test/)
+data/       the live data folder, todo.txt and done.txt (gitignored). Holds this project's own task tracking.
+```
