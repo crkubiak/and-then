@@ -162,10 +162,10 @@ Accepted, as the PRD implies: a second `parent:` token, a repeated key. The Prob
 Setup: `cp -R samples/demo /tmp/demo-ui && PORT=3300 node server.js /tmp/demo-ui`, open http://localhost:3300. Repeat steps against a fresh copy when a step changes data.
 
 1. **Hover visibility.** Desktop width. "+ Subtask" is hidden on rows until you hover; Tab to a row and confirm it appears on keyboard focus. At 375 px wide (DevTools) it is always visible.
-2. **Phone width.** DevTools at 375 px. No horizontal scroll anywhere, 16 px side padding (32 px on desktop), tail (pills, counter, id) drops under the text, toggle and checkbox are 32 px.
+2. **Phone width.** DevTools at 375 px. No horizontal scroll anywhere, 16 px side padding (32 px on desktop), tail (pills, counter, id) drops under the text. The task-row toggle is 32 px wide (30 px tall) and the task checkbox stays 18 × 18. Section headers have no separate toggle target: the whole header is one clickable button.
 3. **Focus ring.** Tab through toolbar, rows, checkboxes. Ring is yellow and not clipped inside project headers and toggles.
 4. **Lock and highlight.** Hover the lock on "Plan data center rack upgrade". Tooltip reads "Complete 4 remaining subtasks first". Click it. The four open subtasks flash with a yellow ring for about 1.5 s. Collapse the row first and repeat: it opens.
-5. **Blocked-by pill.** Click "Blocked by #2" on "Order rack hardware". Page smooth-scrolls so "Get vendor quotes" is centred, it flashes, and its checkbox has focus. With OS "reduce motion" on it jumps instead. Collapse the Infra section first and repeat: it reopens.
+5. **Blocked-by pill.** Click "Blocked by #2" on "Order rack hardware". Page smooth-scrolls so "Get vendor quotes" is centred, it flashes, and its checkbox has focus. With OS "reduce motion" on it jumps instead. Then test the reopen case. The pill and its target are siblings in the demo data, so collapsing hides the pill. Append `2026-11-04 Review vendor quotes dep:2 @laptop` to `/tmp/demo-ui/todo.txt`. That Inbox task is blocked by #2. Collapse "Plan data center rack upgrade" first, then the Infra section, and click "Blocked by #2" on "Review vendor quotes". Infra and the parent row reopen, and "Get vendor quotes" is centred, flashes and has focus.
 6. **Override dialog.** Click the checkbox on "Order rack hardware". Native confirm reads "#2 is not complete. Complete anyway?". Cancel changes nothing. OK writes `x ...` with `dep:2` kept.
 7. **Raw drawer.** Click Raw text. Drawer slides in, focus moves to the todo.txt textarea, Tab stays inside, Escape closes, focus returns to Raw text. At 375 px it fits the screen. Edit and Save re-renders.
 8. **Toasts.** Click Sweep. Toast "Swept 4 tasks to done.txt." appears top-center, disappears after about 4 s, and the x dismisses it. Trigger five different errors (see step 10) and confirm they stack, and that a sixth different error leaves at most 5 on screen. Trigger the same error three times in a row: it shows one toast with a count (`×3`), not three toasts, and the 8 s timer restarts each time.
@@ -188,10 +188,10 @@ Run on 2026-11-03 against scratch copies of `samples/demo` and `samples/problems
 | Step | Result | Notes |
 |---|---|---|
 | 1 Hover visibility | Pass | |
-| 2 Phone width | Pass | Checklist text was wrong: the checkbox (`.task-check`) is 18 × 18 at every width, and the task-row toggle is 32 × 30. The section header toggle is covered because the whole header is one clickable button. |
+| 2 Phone width | Pass | Checklist wording corrected: it claimed the toggle and checkbox were both 32 px. The checkbox (`.task-check`) is 18 × 18 at every width, and the task-row toggle is 32 × 30. The section header toggle is covered because the whole header is one clickable button. |
 | 3 Focus ring | Pass | |
 | 4 Lock and highlight | Pass | |
-| 5 Blocked-by pill | Pass | Needed an extra scratch task (`dep:2` in Inbox) to test the cross-section reopen: with the pill and its target under the same parent, collapsing the section hides the pill. Reduced-motion check skipped. |
+| 5 Blocked-by pill | Pass | Checklist wording corrected: "collapse Infra first and repeat" could not be done with the demo data, because the pill and its target are siblings under one parent and collapsing hides the pill. The step now appends a scratch task (`dep:2` in Inbox) for the cross-section reopen, which is how it was tested. Reduced-motion check skipped. |
 | 6 Override dialog | Pass | |
 | 7 Raw drawer | Pass | |
 | 8 Toasts | Pass | Toast was bottom-left. Moved to top-center (11.15). The five-toast cap was confirmed in step 10, using five identical errors. Identical errors now show one toast with a count, so the step now uses five different errors. That wording is not re-run yet. |
