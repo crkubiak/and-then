@@ -209,7 +209,7 @@ Run on 2026-11-03 against scratch copies of `samples/demo` and `samples/problems
 
 Observations from the pass:
 
-- **Id-less tasks show as new when they change.** The marker key is `id:`, else the exact line, so completing or editing a task with no `id:` looks like a new task (yellow dot) in another tab, not an edit (teal ring). This is as written in PRD §5 and was left as is. Keying on `uid:` first would fix it.
+- **Id-less tasks show as new when they change.** The marker key is `id:`, else the exact line, so completing or editing a task with no `id:` looks like a new task (yellow dot) in another tab, not an edit (teal ring). This is as written in PRD §5 and was left as is.
 - **Sweep reads the completion date only.** Backdating the creation or due date does not enable it. Ticking a checkbox stamps today's date as the completion date, so testing Sweep means editing the first date after the `x`.
 - **A root task may add a second `+project`.** It shows as a badge and the root stays in its primary project's section. Only a different primary project on a subtask is rejected.
 - **Identical errors stack.** Five repeated errors show as five toasts. Collapsing repeats is not planned.
