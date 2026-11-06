@@ -43,7 +43,7 @@ Claude Code asks for approval the first time it sees a project `.mcp.json`.
 
 ## Agent skill
 
-The `taskflow-tasks` skill in `~/.claude-8l/skills/taskflow-tasks/` tells an agent how to use these tools: where tasks live, how to name itself, and what `wip:`, `needs:human`, `by:`, `parent:` and `dep:` mean for it. It links to `docs/FORMAT.md` rather than repeating it. It lives in the profile, not in this repo.
+The `taskflow-tasks` skill in `~/.claude-8l/skills/taskflow-tasks/` tells an agent how to use these tools: where tasks live, how to name itself, and what `wip:`, `needs:human`, `by:`, `parent:` and `dep:` mean for it. It links to `docs/FORMAT.md` rather than repeating it. It lives in the profile, not in this repo. A copy of it also sits in `~/.claude/skills/taskflow-tasks/`, for the standard profile.
 
 ## Tools
 
