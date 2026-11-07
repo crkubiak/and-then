@@ -778,13 +778,20 @@ button.task-check:hover {
 }
 
 /* Unseen markers, cleared in place when seen. New: filled yellow dot and bold text. Edited: hollow teal ring, normal weight. */
+/* The dot hangs in the left indent of the text block instead of sitting in the text flow. The task text is a
+   button, which wraps as one box, so an inline dot left a long task starting on the line below it. */
+.task-main:has(> .seen-dot) {
+  position: relative;
+  padding-left: calc(8px + var(--space-2));
+}
+
 .seen-dot {
-  display: inline-block;
+  position: absolute;
+  top: 11px; /* centered on the first 22px text line, under the 4px row padding */
+  left: 0;
   width: 8px;
   height: 8px;
-  margin-right: var(--space-2);
   border-radius: 50%;
-  vertical-align: middle;
   transition: opacity 300ms; /* removed after the fade; prefers-reduced-motion drops the transition */
 }
 
